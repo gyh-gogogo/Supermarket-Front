@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.SaleItemMapper">
+    
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.supermarket.entity.SaleItem">
+        <id column="sale_item_id" property="saleItemId" jdbcType="BIGINT"/>
+        <result column="sale_id" property="saleId" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="subtotal" property="subtotal" jdbcType="DECIMAL"/>
+    </resultMap>
+
+    <!-- 销售明细和商品信息结果映射 -->
+    <resultMap id="SaleItemWithProductMap" type="java.util.Map">
+        <result column="sale_item_id" property="saleItemId" jdbcType="BIGINT"/>
+        <result column="sale_id" property="saleId" jdbcType="BIGINT"/>
+        <result column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="product_name" property="productName" jdbcType="VARCHAR"/>
+        <result column="barcode" property="barcode" jdbcType="VARCHAR"/>
+        <result column="quantity" property="quantity" jdbcType="INTEGER"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="subtotal" property="subtotal" jdbcType="DECIMAL"/>
+    </resultMap>
+
+    <!-- 基础SQL片段 -->
+    <sql id="Base_Column_List">
+        sale_item_id, sale_id, product_id, quantity, price, subtotal
+    </sql>
+
+    <!-- 自定义查询方法 - 不与BaseMapper重复 -->
+
+    <!-- 根据销售ID获取销售明细 -->
+    <select id="getSaleItemsBySaleId" parameterType="java.lang.Long" resultMap="SaleItemWithProductMap">
+        select si.sale_item_id, si.sale_id, si.product_id, si.quantity, si.price, si.subtotal,
+               p.product_name, p.barcode
+        from sale_items si
+        left join products p on si.product_id = p.product_id
+        where si.sale_id = #{saleId}
+        order by si.sale_item_id
+    </select>
+
+    <!-- 根据商品ID获取销售明细 -->
+    <select id="getSaleItemsByProductId" parameterType="java.lang.Long" resultType="java.util.Map">
+        select si.sale_item_id, si.sale_id, si.product_id, si.quantity, si.price, si.subtotal,
+               s.sale_time, s.order_number
+        from sale_items si
+        left join sales s on si.sale_id = s.sale_id
+        where si.product_id = #{productId}
+        and s.status = 'completed'
+        order by s.sale_time desc
+    </select>
+
+    <!-- 删除销售明细 -->
+    <delete id="deleteBySaleId" parameterType="java.lang.Long">
+        delete from sale_items where sale_id = #{saleId}
+    </delete>
+
+    <!-- 获取商品销售统计 -->
+    <select id="getProductSalesStats" parameterType="java.lang.Long" resultType="java.util.Map">
+        select product_id,
+               sum(quantity) as total_quantity,
+               sum(subtotal) as total_amount,
+               count(distinct sale_id) as order_count
+        from sale_items 
+        where product_id = #{productId}
+        group by product_id
+    </select>
+
+    <!-- 获取热销商品排行 -->
+    <select id="getTopSellingProducts" parameterType="java.util.Map" resultType="java.util.Map">
+        select si.product_id, p.product_name, p.barcode,
+               sum(si.quantity) as total_quantity,
+               sum(si.subtotal) as total_amount,
+               count(distinct si.sale_id) as order_count
+        from sale_items si
+        left join products p on si.product_id = p.product_id
+        left join sales s on si.sale_id = s.sale_id
+        where s.status = 'completed'
+        <if test="startDate != null">
+            and date(s.sale_time) >= #{startDate}
+        </if>
+        <if test="endDate != null">
+            and date(s.sale_time) &lt;= #{endDate}
+        </if>
+        group by si.product_id, p.product_name, p.barcode
+        order by total_quantity desc
+        <if test="limit != null">
+            limit #{limit}
+        </if>
+    </select>
+
+</mapper>

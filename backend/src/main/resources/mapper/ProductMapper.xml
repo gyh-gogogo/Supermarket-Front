@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.ProductMapper">
+    
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.supermarket.entity.Product">
+        <id column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="product_name" property="productName" jdbcType="VARCHAR"/>
+        <result column="barcode" property="barcode" jdbcType="VARCHAR"/>
+        <result column="price" property="price" jdbcType="DECIMAL"/>
+        <result column="cost_price" property="costPrice" jdbcType="DECIMAL"/>
+        <result column="stock_quantity" property="stockQuantity" jdbcType="INTEGER"/>
+        <result column="min_stock_level" property="minStockLevel" jdbcType="INTEGER"/>
+        <result column="description" property="description" jdbcType="VARCHAR"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础SQL片段 -->
+    <sql id="Base_Column_List">
+        product_id, product_name, barcode, price, cost_price, stock_quantity, 
+        min_stock_level, description, status, created_at, updated_at
+    </sql>
+
+    <!-- 自定义查询方法 - 不与BaseMapper重复 -->
+
+
+
+
+
+    <!-- 获取库存总价值 -->
+    <select id="getTotalInventoryValue" resultType="java.math.BigDecimal">
+        select coalesce(sum(stock_quantity * cost_price), 0) 
+        from products 
+        where status = 'active'
+    </select>
+
+    <!-- 获取热销商品排行 -->
+    <select id="getTopSellingProducts" parameterType="java.lang.Integer" resultType="java.util.Map">
+        select p.product_id, p.product_name, p.price,
+               coalesce(sum(si.quantity), 0) as sales_count,
+               coalesce(sum(si.subtotal), 0) as sales_amount
+        from products p
+        left join sale_items si on p.product_id = si.product_id
+        left join sales s on si.sale_id = s.sale_id
+        where s.sale_time >= date_sub(now(), interval 30 day) 
+           or s.sale_time is null
+        group by p.product_id, p.product_name, p.price
+        order by sales_count desc, sales_amount desc
+        limit #{limit}
+    </select>
+
+    <!-- 更新库存 -->
+    <update id="updateStock">
+        update products 
+        set stock_quantity = stock_quantity + #{quantity},
+            updated_at = now()
+        where product_id = #{productId}
+    </update>
+
+    <!-- 批量更新库存 -->
+    <update id="batchUpdateStock" parameterType="java.util.List">
+        <foreach collection="list" item="item" separator=";">
+            update products 
+            set stock_quantity = stock_quantity + #{item.quantity},
+                updated_at = now()
+            where product_id = #{item.productId}
+        </foreach>
+    </update>
+
+</mapper>

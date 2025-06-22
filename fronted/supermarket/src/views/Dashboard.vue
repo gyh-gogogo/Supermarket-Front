@@ -1,0 +1,551 @@
+<template>
+  <div class="dashboard">
+    <!-- 欢迎横幅 -->
+    <div class="welcome-banner">
+      <div class="welcome-content">
+        <h1>🏪 超市管理系统</h1>
+        <p>{{ getGreeting() }}，欢迎使用超市管理系统！</p>
+        <div class="current-time">{{ currentTime }}</div>
+      </div>
+      <div class="system-status">
+        <div class="status-item">
+          <span class="status-dot online"></span>
+          <span>系统运行正常</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 统计卡片区域 -->
+    <div class="stats-grid">
+      <div class="stat-card sales-card">
+        <div class="card-icon">💰</div>
+        <div class="card-content">
+          <h3>今日销售额</h3>
+          <div class="stat-value">¥{{ formatNumber(todayStats.sales) }}</div>
+          <div class="stat-change positive">
+            <span>↗</span>
+            +{{ todayStats.salesChange }}%
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card orders-card">
+        <div class="card-icon">📦</div>
+        <div class="card-content">
+          <h3>今日订单数</h3>
+          <div class="stat-value">{{ todayStats.orders }}</div>
+          <div class="stat-change positive">
+            <span>↗</span>
+            +{{ todayStats.ordersChange }}%
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card products-card">
+        <div class="card-icon">📋</div>
+        <div class="card-content">
+          <h3>商品总数</h3>
+          <div class="stat-value">{{ todayStats.products }}</div>
+          <div class="stat-subtitle">种商品在售</div>
+        </div>
+      </div>
+
+      <div class="stat-card members-card">
+        <div class="card-icon">👥</div>
+        <div class="card-content">
+          <h3>会员总数</h3>
+          <div class="stat-value">{{ todayStats.members }}</div>
+          <div class="stat-subtitle">注册会员</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 快捷操作区域 -->
+    <div class="quick-actions">
+      <h2>⚡ 快捷操作</h2>
+      <div class="actions-grid">
+        <div class="action-item" @click="navigateTo('/cashier')">
+          <div class="action-icon">🛒</div>
+          <div class="action-title">收银台</div>
+          <div class="action-desc">快速收银结算</div>
+        </div>
+        
+        <div class="action-item" @click="navigateTo('/products')">
+          <div class="action-icon">📦</div>
+          <div class="action-title">商品管理</div>
+          <div class="action-desc">添加、编辑商品</div>
+        </div>
+        
+        <div class="action-item" @click="navigateTo('/members')">
+          <div class="action-icon">👤</div>
+          <div class="action-title">会员管理</div>
+          <div class="action-desc">会员信息维护</div>
+        </div>
+        
+        <div class="action-item" @click="navigateTo('/reports')">
+          <div class="action-icon">📈</div>
+          <div class="action-title">销售报表</div>
+          <div class="action-desc">查看销售数据</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 最近活动 -->
+    <div class="recent-section">
+      <div class="recent-activities">
+        <h3>🕒 最近活动</h3>
+        <div class="activity-list">
+          <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
+            <div class="activity-icon">{{ activity.icon }}</div>
+            <div class="activity-content">
+              <div class="activity-title">{{ activity.title }}</div>
+              <div class="activity-time">{{ activity.time }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 库存预警 -->
+      <div class="inventory-alerts" v-if="lowStockProducts.length > 0">
+        <h3>⚠️ 库存预警</h3>
+        <div class="alert-list">
+          <div v-for="product in lowStockProducts" :key="product.id" class="alert-item">
+            <div class="alert-content">
+              <div class="alert-title">{{ product.name }}</div>
+              <div class="alert-desc">库存仅剩 {{ product.stock }} 件</div>
+            </div>
+            <el-button type="warning" size="small">补货</el-button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElButton } from 'element-plus'
+
+const router = useRouter()
+
+// 响应式数据
+const currentTime = ref('')
+
+const todayStats = reactive({
+  sales: 12680.50,
+  salesChange: 8.5,
+  orders: 89,
+  ordersChange: 12.3,
+  products: 1256,
+  members: 896
+})
+
+const recentActivities = ref([
+  {
+    id: 1,
+    icon: '💰',
+    title: '收银员张三完成了一笔¥156.80的交易',
+    time: '5分钟前'
+  },
+  {
+    id: 2,
+    icon: '📦',
+    title: '商品"可口可乐500ml"库存不足',
+    time: '15分钟前'
+  },
+  {
+    id: 3,
+    icon: '👤',
+    title: '新增会员：李四',
+    time: '30分钟前'
+  },
+  {
+    id: 4,
+    icon: '📈',
+    title: '今日销售额已突破¥10,000',
+    time: '2小时前'
+  }
+])
+
+const lowStockProducts = ref([
+  { id: 1, name: '可口可乐500ml', stock: 8 },
+  { id: 2, name: '农夫山泉550ml', stock: 15 },
+  { id: 3, name: '康师傅方便面', stock: 5 }
+])
+
+// 方法
+const getGreeting = () => {
+  const hour = new Date().getHours()
+  if (hour < 12) return '早上好'
+  if (hour < 18) return '下午好'
+  return '晚上好'
+}
+
+const formatNumber = (num: number) => {
+  return num.toLocaleString('zh-CN', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2
+  })
+}
+
+const navigateTo = (path: string) => {
+  router.push(path)
+}
+
+const updateTime = () => {
+  currentTime.value = new Date().toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
+}
+
+// 生命周期
+let timeInterval: number
+
+onMounted(() => {
+  updateTime()
+  timeInterval = window.setInterval(updateTime, 1000)
+})
+
+onUnmounted(() => {
+  if (timeInterval) {
+    clearInterval(timeInterval)
+  }
+})
+</script>
+
+<style scoped>
+.dashboard {
+  padding: 20px;
+  background: #f5f7fa;
+  min-height: 100vh;
+}
+
+.welcome-banner {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 30px;
+  border-radius: 15px;
+  margin-bottom: 25px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.welcome-content h1 {
+  margin: 0 0 10px 0;
+  font-size: 2.2rem;
+  font-weight: bold;
+}
+
+.welcome-content p {
+  margin: 0 0 10px 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.current-time {
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+.system-status {
+  text-align: right;
+}
+
+.status-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.online {
+  background: #27ae60;
+  box-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.card-icon {
+  font-size: 2.5rem;
+  margin-right: 20px;
+  opacity: 0.8;
+}
+
+.card-content h3 {
+  margin: 0 0 8px 0;
+  color: #666;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.stat-value {
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 5px;
+}
+
+.stat-change {
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-change.positive {
+  color: #27ae60;
+}
+
+.stat-subtitle {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.sales-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #e74c3c;
+}
+
+.orders-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #3498db;
+}
+
+.products-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #f39c12;
+}
+
+.members-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: #27ae60;
+}
+
+.quick-actions {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.quick-actions h2 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.action-item {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+}
+
+.action-item:hover {
+  background: #e9ecef;
+  border-color: #667eea;
+  transform: translateY(-2px);
+}
+
+.action-icon {
+  font-size: 2.5rem;
+  margin-bottom: 12px;
+}
+
+.action-title {
+  font-size: 1rem;
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 6px;
+}
+
+.action-desc {
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.recent-section {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 25px;
+}
+
+.recent-activities, .inventory-alerts {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.recent-activities h3, .inventory-alerts h3 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.2rem;
+}
+
+.activity-list, .alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.activity-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  font-size: 1.3rem;
+  margin-right: 12px;
+  opacity: 0.7;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-title {
+  font-size: 0.9rem;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.activity-time {
+  font-size: 0.8rem;
+  color: #999;
+}
+
+.inventory-alerts {
+  border-left: 4px solid #f39c12;
+}
+
+.inventory-alerts h3 {
+  color: #f39c12;
+}
+
+.alert-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px;
+  background: #fff3cd;
+  border-radius: 6px;
+  border: 1px solid #ffeaa7;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-title {
+  font-weight: bold;
+  color: #2c3e50;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.alert-desc {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+@media (max-width: 768px) {
+  .dashboard {
+    padding: 15px;
+  }
+  
+  .welcome-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 15px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .recent-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .actions-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+</style>

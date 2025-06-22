@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.SaleMapper">
+    
+    <!-- 结果映射 -->
+    <resultMap id="BaseResultMap" type="com.supermarket.entity.Sale">
+        <id column="sale_id" property="saleId" jdbcType="BIGINT"/>
+        <result column="order_number" property="orderNumber" jdbcType="VARCHAR"/>
+        <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
+        <result column="discount_amount" property="discountAmount" jdbcType="DECIMAL"/>
+        <result column="final_amount" property="finalAmount" jdbcType="DECIMAL"/>
+        <result column="payment_method" property="paymentMethod" jdbcType="VARCHAR"/>
+        <result column="cashier_id" property="cashierId" jdbcType="BIGINT"/>
+        <result column="member_id" property="memberId" jdbcType="BIGINT"/>
+        <result column="sale_time" property="saleTime" jdbcType="TIMESTAMP"/>
+        <result column="status" property="status" jdbcType="VARCHAR"/>
+        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
+        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    </resultMap>
+
+    <!-- 基础SQL片段 -->
+    <sql id="Base_Column_List">
+        sale_id, order_number, total_amount, discount_amount, final_amount,
+        payment_method, cashier_id, member_id, sale_time, status, created_at, updated_at
+    </sql>
+
+    <!-- 自定义查询方法 - 不与BaseMapper重复 -->
+
+    <!-- 按日期获取销售总额 -->
+    <select id="getTotalSalesByDate" parameterType="java.time.LocalDate" resultType="java.math.BigDecimal">
+        select coalesce(sum(final_amount), 0) 
+        from sales 
+        where date(sale_time) = #{date}
+        and status = 'completed'
+    </select>
+
+    <!-- 按日期获取订单数量 -->
+    <select id="getOrderCountByDate" parameterType="java.time.LocalDate" resultType="java.lang.Integer">
+        select count(*) 
+        from sales 
+        where date(sale_time) = #{date}
+        and status = 'completed'
+    </select>
+
+    <!-- 按日期获取唯一客户数 -->
+    <select id="getUniqueCustomerCountByDate" parameterType="java.time.LocalDate" resultType="java.lang.Integer">
+        select count(distinct coalesce(member_id, concat('guest_', sale_id))) 
+        from sales 
+        where date(sale_time) = #{date}
+        and status = 'completed'
+    </select>
+
+    <!-- 获取最近销售活动 -->
+    <select id="getRecentSalesActivities" parameterType="java.lang.Integer" resultType="java.util.Map">
+        select s.sale_id, s.total_amount, s.sale_time, u.username as cashier_name
+        from sales s 
+        left join users u on s.cashier_id = u.user_id
+        where s.status = 'completed'
+        order by s.sale_time desc 
+        limit #{limit}
+    </select>
+
+    <!-- 获取收银员今日业绩 -->
+    <select id="getCashierPerformanceToday" resultType="java.util.Map">
+        select u.username as cashier_name, 
+               count(*) as orders_count,
+               coalesce(sum(s.final_amount), 0) as sales_amount
+        from sales s 
+        left join users u on s.cashier_id = u.user_id
+        where date(s.sale_time) = curdate() 
+        and s.status = 'completed'
+        group by s.cashier_id, u.username
+        order by sales_amount desc
+    </select>
+
+    <!-- 获取今日小时销售数据 -->
+    <select id="getHourlySalesToday" resultType="java.util.Map">
+        select hour(sale_time) as hour, 
+               count(*) as orders, 
+               sum(final_amount) as sales
+        from sales 
+        where date(sale_time) = curdate() 
+        and status = 'completed'
+        group by hour(sale_time) 
+        order by hour
+    </select>
+
+    <!-- 获取收银员销售历史 -->
+    <select id="getSaleHistoryByCashier" resultType="java.util.Map">
+        select s.*, m.member_name
+        from sales s
+        left join members m on s.member_id = m.member_id
+        where s.cashier_id = #{cashierId}
+        and s.status = 'completed'
+        order by s.sale_time desc 
+        limit #{limit}
+    </select>
+
+    <!-- 获取收银员今日销售额 -->
+    <select id="getTodaySalesByCashier" resultType="java.math.BigDecimal">
+        select coalesce(sum(final_amount), 0) 
+        from sales
+        where cashier_id = #{cashierId} 
+        and date(sale_time) = curdate()
+        and status = 'completed'
+    </select>
+
+    <!-- 获取收银员今日订单数 -->
+    <select id="getTodayOrdersByCashier" resultType="java.lang.Integer">
+        select count(*) 
+        from sales
+        where cashier_id = #{cashierId} 
+        and date(sale_time) = curdate()
+        and status = 'completed'
+    </select>
+
+</mapper>

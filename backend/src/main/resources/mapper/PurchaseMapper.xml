@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.supermarket.mapper.PurchaseMapper">
+    
+    <select id="selectPurchasesWithOperator" resultType="com.supermarket.entity.Purchase">
+        SELECT p.*, u.username as operator_name 
+        FROM purchases p 
+        LEFT JOIN users u ON p.operator_id = u.user_id 
+        WHERE 1=1
+        <if test="purchaseNumber != null and purchaseNumber != ''">
+            AND p.purchase_number LIKE CONCAT('%', #{purchaseNumber}, '%')
+        </if>
+        <if test="supplierName != null and supplierName != ''">
+            AND p.supplier_name LIKE CONCAT('%', #{supplierName}, '%')
+        </if>
+        ORDER BY p.purchase_date DESC
+    </select>
+    
+</mapper>
