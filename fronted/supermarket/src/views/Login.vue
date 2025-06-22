@@ -1,384 +1,353 @@
 <template>
-  <div class="login-container">
-    <div class="login-card" :class="{ 'loading': userStore.loading }">
+  <div class="login-page">
+    <div class="login-container">
       <div class="login-header">
-        <h1>超市管理系统</h1>
-        <p>请登录您的账户</p>
+        <h1>🏪 超市管理系统</h1>
+        <p>请选择您的角色并登录</p>
       </div>
-      
-      <el-form
-        ref="loginFormRef"
-        :model="loginForm"
-        :rules="loginRules"
-        class="login-form"
-        @keyup.enter="handleLogin"
-      >
-        <el-form-item prop="username">
-          <el-input
-            v-model="loginForm.username"
-            placeholder="用户名"
-            size="large"
-            prefix-icon="User"
-            :disabled="userStore.loading"
-            autocomplete="username"
-          />
-        </el-form-item>
-        
-        <el-form-item prop="password">
-          <el-input
-            v-model="loginForm.password"
-            type="password"
-            placeholder="密码"
-            size="large"
-            prefix-icon="Lock"
-            show-password
-            :disabled="userStore.loading"
-            autocomplete="current-password"
-          />
-        </el-form-item>
-        
-        <el-form-item>
-          <el-button
-            type="primary"
-            size="large"
-            :loading="userStore.loading"
-            @click="handleLogin"
-            class="login-button"
-            :disabled="!loginForm.username || !loginForm.password"
-          >
-            {{ userStore.loading ? '登录中...' : '登录' }}
-          </el-button>
-        </el-form-item>
-      </el-form>
-      
-      <!-- 快速登录区域 -->
-      <div class="demo-accounts" v-if="!userStore.loading">
-        <h3>🚀 快速登录</h3>
-        <div class="account-grid">
-          <div class="account-item" @click="quickLogin('admin', '123456')">
-            <div class="role">👑 系统管理员</div>
-            <div class="credentials">admin / 123456</div>
-            <div class="permissions">全部功能权限</div>
+
+      <div class="login-form">
+        <el-form 
+          ref="loginFormRef" 
+          :model="loginForm" 
+          :rules="rules"
+          label-width="0"
+          size="large"
+        >
+          <el-form-item prop="username">
+            <el-input
+              v-model="loginForm.username"
+              placeholder="请输入用户名"
+              prefix-icon="User"
+              clearable
+            />
+          </el-form-item>
+
+          <el-form-item prop="password">
+            <el-input
+              v-model="loginForm.password"
+              type="password"
+              placeholder="请输入密码"
+              prefix-icon="Lock"
+              show-password
+              @keyup.enter="handleLogin"
+            />
+          </el-form-item>
+
+          <el-form-item>
+            <el-button 
+              type="primary" 
+              class="login-btn"
+              :loading="loginLoading"
+              @click="handleLogin"
+            >
+              登录
+            </el-button>
+          </el-form-item>
+        </el-form>
+
+        <!-- 角色说明 -->
+        <div class="role-info">
+          <h3>测试账号</h3>
+          <div class="role-item">
+            <span class="role-tag admin">系统管理员</span>
+            <span>admin / admin123</span>
+            <small>全部功能权限</small>
           </div>
-          <div class="account-item" @click="quickLogin('manager', '123456')">
-            <div class="role">📦 商品管理员</div>
-            <div class="credentials">manager / 123456</div>
-            <div class="permissions">商品管理、进货、报表</div>
+          <div class="role-item">
+            <span class="role-tag manager">商品管理员</span>
+            <span>manager / manager123</span>
+            <small>商品管理、销售报表</small>
           </div>
-          <div class="account-item" @click="quickLogin('cashier', '123456')">
-            <div class="role">🛒 收银员</div>
-            <div class="credentials">cashier / 123456</div>
-            <div class="permissions">收银台功能</div>
+          <div class="role-item">
+            <span class="role-tag cashier">收银员</span>
+            <span>cashier / cashier123</span>
+            <small>收银台功能</small>
           </div>
         </div>
-      </div>
-      
-      <!-- 当前用户切换 -->
-      <div class="current-user" v-if="userStore.isLoggedIn">
-        <div class="user-info">
-          <span class="user-name">{{ userStore.userName }}</span>
-          <el-tag :type="getRoleTagType(userStore.userRole)" size="small">
-            {{ getRoleLabel(userStore.userRole) }}
-          </el-tag>
-        </div>
-        <el-button @click="handleLogout" size="small" type="danger">
-          切换账户
-        </el-button>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { useUserStore } from '../stores/user'
+import { ElMessage, ElForm } from 'element-plus'
+import { User, Lock } from '@element-plus/icons-vue'
 
 const router = useRouter()
-const userStore = useUserStore()
-const loginFormRef = ref()
+const loginFormRef = ref<InstanceType<typeof ElForm>>()
+const loginLoading = ref(false)
 
+// 登录表单数据
 const loginForm = reactive({
   username: '',
   password: ''
 })
 
-const loginRules = {
+// 表单验证规则
+const rules = {
   username: [
     { required: true, message: '请输入用户名', trigger: 'blur' }
   ],
   password: [
     { required: true, message: '请输入密码', trigger: 'blur' },
-    { min: 6, message: '密码长度不能少于6位', trigger: 'blur' }
+    { min: 6, message: '密码长度至少6位', trigger: 'blur' }
   ]
 }
+
+// 模拟用户数据库
+const users = [
+  {
+    username: 'admin',
+    password: 'admin123',
+    role: 'admin',
+    name: '系统管理员',
+    permissions: ['dashboard', 'products', 'members', 'users', 'cashier', 'reports']
+  },
+  {
+    username: 'manager',
+    password: 'manager123',
+    role: 'manager',
+    name: '商品管理员',
+    permissions: ['dashboard', 'products', 'reports']
+  },
+  {
+    username: 'cashier',
+    password: 'cashier123',
+    role: 'cashier',
+    name: '收银员',
+    permissions: ['cashier']
+  }
+]
 
 // 登录处理
 const handleLogin = async () => {
   if (!loginFormRef.value) return
-  
+
   try {
     await loginFormRef.value.validate()
-    
-    console.log('🔐 用户登录:', loginForm.username)
-    
-    const success = await simulateLogin(loginForm.username, loginForm.password)
-    
-    if (success) {
-      // 登录成功，跳转到首页
-      await router.push('/dashboard')
+    loginLoading.value = true
+
+    console.log('🔐 尝试登录:', loginForm.username)
+
+    // 模拟API调用延迟
+    await new Promise(resolve => setTimeout(resolve, 1000))
+
+    // 验证用户信息
+    const user = users.find(u => 
+      u.username === loginForm.username && 
+      u.password === loginForm.password
+    )
+
+    if (user) {
+      // 登录成功，保存用户信息
+      const userInfo = {
+        username: user.username,
+        name: user.name,
+        role: user.role,
+        permissions: user.permissions,
+        loginTime: new Date().toISOString()
+      }
+
+      // 保存到localStorage
+      localStorage.setItem('userInfo', JSON.stringify(userInfo))
+      localStorage.setItem('isLoggedIn', 'true')
+
+      ElMessage.success(`欢迎您，${user.name}！`)
+
+      // 根据角色跳转到不同页面
+      switch (user.role) {
+        case 'admin':
+          router.push('/dashboard') // 系统管理员看到完整的仪表盘
+          break
+        case 'manager':
+          router.push('/products') // 商品管理员直接进入商品管理
+          break
+        case 'cashier':
+          router.push('/cashier') // 收银员直接进入收银台
+          break
+        default:
+          router.push('/dashboard')
+      }
     } else {
       ElMessage.error('用户名或密码错误')
     }
   } catch (error) {
-    console.error('登录验证失败:', error)
+    console.error('登录失败:', error)
+    ElMessage.error('登录失败，请重试')
+  } finally {
+    loginLoading.value = false
   }
 }
-
-// 模拟登录验证
-const simulateLogin = async (username: string, password: string): Promise<boolean> => {
-  const demoAccounts = [
-    { username: 'admin', password: '123456', role: 'admin', name: '系统管理员' },
-    { username: 'manager', password: '123456', role: 'manager', name: '商品管理员' },
-    { username: 'cashier', password: '123456', role: 'cashier', name: '收银员' }
-  ]
-  
-  const user = demoAccounts.find(u => u.username === username && u.password === password)
-  
-  if (user) {
-    const loginUser = {
-      id: Date.now(),
-      username: user.username,
-      name: user.name,
-      role: user.role,
-      token: `token_${user.username}_${Date.now()}`
-    }
-    
-    return await userStore.login(loginUser)
-  }
-  
-  return false
-}
-
-// 快速登录
-const quickLogin = async (username: string, password: string) => {
-  loginForm.username = username
-  loginForm.password = password
-  await handleLogin()
-}
-
-// 登出处理
-const handleLogout = async () => {
-  await userStore.logout()
-  loginForm.username = ''
-  loginForm.password = ''
-}
-
-// 获取角色标签类型
-const getRoleTagType = (role: string) => {
-  switch (role) {
-    case 'admin': return 'danger'
-    case 'manager': return 'warning'
-    case 'cashier': return 'success'
-    default: return 'info'
-  }
-}
-
-// 获取角色标签
-const getRoleLabel = (role: string) => {
-  switch (role) {
-    case 'admin': return '系统管理员'
-    case 'manager': return '商品管理员'
-    case 'cashier': return '收银员'
-    default: return '未知角色'
-  }
-}
-
-// 组件挂载时检查登录状态
-onMounted(() => {
-  if (userStore.isLoggedIn) {
-    console.log('✅ 用户已登录，准备跳转')
-    router.push('/dashboard')
-  }
-})
 </script>
 
 <style scoped>
-.login-container {
+.login-page {
   min-height: 100vh;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 20px;
 }
 
-.login-card {
+.login-container {
   background: rgba(255, 255, 255, 0.95);
-  padding: 40px;
+  backdrop-filter: blur(10px);
   border-radius: 20px;
+  padding: 40px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   width: 100%;
-  max-width: 480px;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
-}
-
-.login-card.loading {
-  opacity: 0.8;
-  pointer-events: none;
+  max-width: 450px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .login-header {
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
 }
 
 .login-header h1 {
-  font-size: 2.2em;
-  color: #333;
+  font-size: 2.2rem;
+  color: #2c3e50;
   margin: 0 0 10px 0;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .login-header p {
   color: #666;
-  font-size: 1em;
   margin: 0;
+  font-size: 1rem;
 }
 
 .login-form {
+  width: 100%;
+}
+
+.el-form-item {
   margin-bottom: 25px;
 }
 
-.login-form .el-form-item {
-  margin-bottom: 20px;
+.el-input {
+  border-radius: 12px;
 }
 
-.login-button {
+.el-input .el-input__wrapper {
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.el-input .el-input__wrapper:hover {
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+.el-input .el-input__wrapper.is-focus {
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+  border-color: #667eea;
+}
+
+.login-btn {
   width: 100%;
-  height: 48px;
-  font-size: 16px;
+  height: 50px;
+  font-size: 1.1rem;
   font-weight: 600;
+  border-radius: 12px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border: none;
-  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
   transition: all 0.3s ease;
 }
 
-.login-button:hover:not(:disabled) {
+.login-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
 }
 
-.login-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
+.role-info {
+  margin-top: 30px;
+  padding: 25px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
-.demo-accounts {
-  border-top: 1px solid #eee;
-  padding-top: 25px;
-  margin-bottom: 20px;
-}
-
-.demo-accounts h3 {
+.role-info h3 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 1.1rem;
   text-align: center;
-  color: #666;
-  margin: 0 0 15px 0;
-  font-size: 1em;
 }
 
-.account-grid {
-  display: grid;
-  gap: 10px;
-}
-
-.account-item {
+.role-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 15px;
   padding: 12px;
-  border: 2px solid #f0f0f0;
+  background: white;
   border-radius: 10px;
-  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
   transition: all 0.3s ease;
-  text-align: center;
 }
 
-.account-item:hover {
-  border-color: #667eea;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
-  transform: translateY(-1px);
+.role-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.account-item .role {
+.role-item:last-child {
+  margin-bottom: 0;
+}
+
+.role-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: #333;
-  margin-bottom: 4px;
-  font-size: 0.9em;
+  color: white;
+  width: fit-content;
 }
 
-.account-item .credentials {
-  font-size: 0.8em;
-  color: #666;
+.role-tag.admin {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.role-tag.manager {
+  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+}
+
+.role-tag.cashier {
+  background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+}
+
+.role-item span:nth-child(2) {
   font-family: 'Courier New', monospace;
-  margin-bottom: 3px;
-}
-
-.account-item .permissions {
-  font-size: 0.75em;
-  color: #999;
-}
-
-.current-user {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px;
-  background: #f8f9fa;
-  border-radius: 10px;
-  border-left: 4px solid #28a745;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-name {
+  color: #2c3e50;
   font-weight: 600;
-  color: #333;
+  font-size: 0.9rem;
 }
 
-/* 响应式设计 */
-@media (max-width: 768px) {
+.role-item small {
+  color: #666;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
   .login-container {
-    padding: 15px;
-  }
-  
-  .login-card {
-    padding: 25px 20px;
+    padding: 30px 20px;
+    margin: 10px;
   }
   
   .login-header h1 {
-    font-size: 1.8em;
+    font-size: 1.8rem;
   }
   
-  .account-item {
-    padding: 10px;
+  .role-info {
+    padding: 20px;
   }
-}
-
-/* 加载动画 */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.login-card.loading {
-  animation: pulse 1.5s ease-in-out infinite;
 }
 </style>

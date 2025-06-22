@@ -4,9 +4,8 @@
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>用户管理</span>
+          <span>👥 用户管理</span>
           <el-button type="primary" @click="showAddDialog">
-            <el-icon><Plus /></el-icon>
             新增用户
           </el-button>
         </div>
@@ -38,9 +37,8 @@
 
       <!-- 表格 -->
       <el-table :data="tableData" v-loading="loading">
-        <el-table-column prop="userId" label="ID" width="80" />
         <el-table-column prop="username" label="用户名" />
-        <el-table-column prop="email" label="邮箱" />
+        <el-table-column prop="name" label="姓名" />
         <el-table-column prop="role" label="角色" width="120">
           <template #default="{ row }">
             <el-tag :type="getRoleType(row.role)">
@@ -48,33 +46,33 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="80">
+        <el-table-column prop="permissions" label="权限" min-width="200">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'active' ? 'success' : 'danger'">
-              {{ row.status === 'active' ? '正常' : '停用' }}
+            <el-tag 
+              v-for="perm in row.permissions" 
+              :key="perm" 
+              size="small" 
+              style="margin-right: 4px;"
+            >
+              {{ getPermissionText(perm) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="创建时间" width="160" />
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button size="small" @click="handleEdit(row)">编辑</el-button>
             <el-button size="small" type="warning" @click="handleResetPassword(row)">重置密码</el-button>
-            <el-button size="small" type="danger" @click="handleDelete(row)">删除</el-button>
+            <el-button 
+              size="small" 
+              type="danger" 
+              @click="handleDelete(row)"
+              :disabled="row.username === 'admin'"
+            >
+              删除
+            </el-button>
           </template>
         </el-table-column>
       </el-table>
-
-      <!-- 分页 -->
-      <div class="pagination">
-        <el-pagination
-          v-model:current-page="pagination.current"
-          v-model:page-size="pagination.size"
-          :total="pagination.total"
-          :page-sizes="[10, 20, 50, 100]"
-          layout="total, sizes, prev, pager, next, jumper"
-        />
-      </div>
     </el-card>
 
     <!-- 添加/编辑对话框 -->
@@ -83,15 +81,25 @@
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="请输入用户名" :disabled="isEdit" />
         </el-form-item>
-        <el-form-item label="邮箱" prop="email">
-          <el-input v-model="form.email" placeholder="请输入邮箱" />
+        <el-form-item label="姓名" prop="name">
+          <el-input v-model="form.name" placeholder="请输入姓名" />
         </el-form-item>
         <el-form-item label="角色" prop="role">
-          <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%">
+          <el-select v-model="form.role" placeholder="请选择角色" style="width: 100%" @change="updatePermissions">
             <el-option label="系统管理员" value="admin" />
             <el-option label="商品管理员" value="manager" />
             <el-option label="收银员" value="cashier" />
           </el-select>
+        </el-form-item>
+        <el-form-item label="权限" prop="permissions">
+          <el-checkbox-group v-model="form.permissions">
+            <el-checkbox label="dashboard">仪表盘</el-checkbox>
+            <el-checkbox label="cashier">收银台</el-checkbox>
+            <el-checkbox label="products">商品管理</el-checkbox>
+            <el-checkbox label="members">会员管理</el-checkbox>
+            <el-checkbox label="reports">销售报表</el-checkbox>
+            <el-checkbox label="users">用户管理</el-checkbox>
+          </el-checkbox-group>
         </el-form-item>
         <el-form-item label="密码" prop="password" v-if="!isEdit">
           <el-input v-model="form.password" type="password" placeholder="请输入密码" />
@@ -108,16 +116,13 @@
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
 
 interface User {
-  userId?: number
   username: string
-  email: string
+  name: string
   role: string
+  permissions: string[]
   password?: string
-  status?: string
-  createdAt?: string
 }
 
 // 数据
@@ -134,30 +139,28 @@ const searchForm = reactive({
   role: ''
 })
 
-// 分页
-const pagination = reactive({
-  current: 1,
-  size: 10,
-  total: 0
-})
-
 // 表单数据
 const form = reactive<User>({
   username: '',
-  email: '',
+  name: '',
   role: '',
+  permissions: [],
   password: ''
 })
 
 // 表单验证规则
 const rules = {
   username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
-  email: [
-    { required: true, message: '请输入邮箱', trigger: 'blur' },
-    { type: 'email', message: '请输入正确的邮箱格式', trigger: 'blur' }
-  ],
+  name: [{ required: true, message: '请输入姓名', trigger: 'blur' }],
   role: [{ required: true, message: '请选择角色', trigger: 'change' }],
   password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+}
+
+// 预设角色权限
+const rolePermissions: Record<string, string[]> = {
+  admin: ['dashboard', 'products', 'members', 'users', 'cashier', 'reports'],
+  manager: ['dashboard', 'products', 'reports'],
+  cashier: ['cashier']
 }
 
 // 方法
@@ -167,31 +170,24 @@ const loadData = () => {
   setTimeout(() => {
     tableData.value = [
       {
-        userId: 1,
         username: 'admin',
-        email: 'admin@supermarket.com',
+        name: '系统管理员',
         role: 'admin',
-        status: 'active',
-        createdAt: '2024-01-01 00:00:00'
+        permissions: ['dashboard', 'products', 'members', 'users', 'cashier', 'reports']
       },
       {
-        userId: 2,
         username: 'manager',
-        email: 'manager@supermarket.com',
+        name: '商品管理员',
         role: 'manager',
-        status: 'active',
-        createdAt: '2024-01-02 00:00:00'
+        permissions: ['dashboard', 'products', 'reports']
       },
       {
-        userId: 3,
         username: 'cashier',
-        email: 'cashier@supermarket.com',
+        name: '收银员',
         role: 'cashier',
-        status: 'active',
-        createdAt: '2024-01-03 00:00:00'
+        permissions: ['cashier']
       }
     ]
-    pagination.total = tableData.value.length
     loading.value = false
   }, 500)
 }
@@ -211,8 +207,9 @@ const showAddDialog = () => {
   isEdit.value = false
   Object.assign(form, {
     username: '',
-    email: '',
+    name: '',
     role: '',
+    permissions: [],
     password: ''
   })
   dialogVisible.value = true
@@ -221,8 +218,14 @@ const showAddDialog = () => {
 const handleEdit = (row: User) => {
   dialogTitle.value = '编辑用户'
   isEdit.value = true
-  Object.assign(form, row)
+  Object.assign(form, { ...row, password: '' })
   dialogVisible.value = true
+}
+
+const updatePermissions = () => {
+  if (form.role && rolePermissions[form.role]) {
+    form.permissions = [...rolePermissions[form.role]]
+  }
 }
 
 const handleSubmit = async () => {
@@ -230,7 +233,6 @@ const handleSubmit = async () => {
   
   await formRef.value.validate()
   
-  // 模拟提交
   ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
   dialogVisible.value = false
   loadData()
@@ -277,6 +279,18 @@ const getRoleText = (role: string) => {
   return texts[role] || role
 }
 
+const getPermissionText = (permission: string) => {
+  const texts: Record<string, string> = {
+    dashboard: '仪表盘',
+    cashier: '收银台',
+    products: '商品管理',
+    members: '会员管理',
+    reports: '销售报表',
+    users: '用户管理'
+  }
+  return texts[permission] || permission
+}
+
 // 初始化
 onMounted(() => {
   loadData()
@@ -296,10 +310,5 @@ onMounted(() => {
 
 .search-area {
   margin-bottom: 20px;
-}
-
-.pagination {
-  margin-top: 20px;
-  text-align: center;
 }
 </style>

@@ -1,31 +1,85 @@
 <template>
   <div id="app">
-    <div class="layout">
+    <!-- 登录页面 -->
+    <router-view v-if="!isLoggedIn" />
+    
+    <!-- 主应用界面 -->
+    <div v-else class="layout">
       <!-- 侧边栏 -->
       <div class="sidebar">
         <div class="logo">
           <h2>🏪 超市管理</h2>
+          <div class="user-role">
+            <el-tag :type="getRoleType(currentUser?.role)">
+              {{ getRoleText(currentUser?.role) }}
+            </el-tag>
+          </div>
         </div>
         <nav class="nav-menu">
-          <router-link to="/" class="nav-item" active-class="active">
+          <!-- 仪表盘 - 管理员和商品管理员可见 -->
+          <router-link 
+            v-if="hasPermission('dashboard')" 
+            to="/dashboard" 
+            class="nav-item" 
+            active-class="active"
+          >
             <span class="nav-icon">📊</span>
             <span class="nav-text">仪表盘</span>
           </router-link>
-          <router-link to="/cashier" class="nav-item" active-class="active">
+          
+          <!-- 收银台 - 所有角色都可见（收银员主要功能） -->
+          <router-link 
+            v-if="hasPermission('cashier')" 
+            to="/cashier" 
+            class="nav-item" 
+            active-class="active"
+          >
             <span class="nav-icon">🛒</span>
             <span class="nav-text">收银台</span>
           </router-link>
-          <router-link to="/products" class="nav-item" active-class="active">
+          
+          <!-- 商品管理 - 管理员和商品管理员可见 -->
+          <router-link 
+            v-if="hasPermission('products')" 
+            to="/products" 
+            class="nav-item" 
+            active-class="active"
+          >
             <span class="nav-icon">📦</span>
             <span class="nav-text">商品管理</span>
           </router-link>
-          <router-link to="/members" class="nav-item" active-class="active">
+          
+          <!-- 会员管理 - 仅管理员可见 -->
+          <router-link 
+            v-if="hasPermission('members')" 
+            to="/members" 
+            class="nav-item" 
+            active-class="active"
+          >
             <span class="nav-icon">👤</span>
             <span class="nav-text">会员管理</span>
           </router-link>
-          <router-link to="/reports" class="nav-item" active-class="active">
+          
+          <!-- 销售报表 - 管理员和商品管理员可见 -->
+          <router-link 
+            v-if="hasPermission('reports')" 
+            to="/reports" 
+            class="nav-item" 
+            active-class="active"
+          >
             <span class="nav-icon">📈</span>
             <span class="nav-text">销售报表</span>
+          </router-link>
+          
+          <!-- 用户管理 - 仅管理员可见 -->
+          <router-link 
+            v-if="hasPermission('users')" 
+            to="/users" 
+            class="nav-item" 
+            active-class="active"
+          >
+            <span class="nav-icon">👥</span>
+            <span class="nav-text">用户管理</span>
           </router-link>
         </nav>
       </div>
@@ -38,8 +92,8 @@
             <h1 class="page-title">{{ getPageTitle() }}</h1>
           </div>
           <div class="header-right">
-            <span class="user-info">管理员</span>
-            <el-button type="primary" size="small" @click="logout">退出</el-button>
+            <span class="user-info">{{ currentUser?.name }}</span>
+            <el-button type="primary" size="small" @click="logout">退出登录</el-button>
           </div>
         </header>
 
@@ -53,29 +107,95 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ElButton, ElMessage } from 'element-plus'
+import { ElButton, ElTag, ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 
+// 用户登录状态
+const isLoggedIn = ref(false)
+const currentUser = ref<{
+  username: string
+  name: string
+  role: string
+  permissions: string[]
+} | null>(null)
+
+// 检查登录状态
+const checkLoginStatus = () => {
+  const loginStatus = localStorage.getItem('isLoggedIn')
+  const userInfoStr = localStorage.getItem('userInfo')
+  
+  if (loginStatus === 'true' && userInfoStr) {
+    try {
+      currentUser.value = JSON.parse(userInfoStr)
+      isLoggedIn.value = true
+      console.log('👤 当前用户:', currentUser.value)
+    } catch (error) {
+      console.error('用户信息解析失败:', error)
+      logout()
+    }
+  } else {
+    router.push('/login')
+  }
+}
+
+// 权限检查
+const hasPermission = (permission: string) => {
+  return currentUser.value?.permissions?.includes(permission) || false
+}
+
+// 获取页面标题
 const getPageTitle = () => {
   const titles: Record<string, string> = {
     '/': '仪表盘',
+    '/login': '用户登录',
     '/dashboard': '仪表盘',
     '/cashier': '收银台',
     '/products': '商品管理',
     '/members': '会员管理',
-    '/reports': '销售报表'
+    '/reports': '销售报表',
+    '/users': '用户管理'
   }
   return titles[route.path] || '超市管理系统'
 }
 
-const logout = () => {
-  ElMessage.success('已退出登录')
-  // 这里可以添加实际的登出逻辑
+// 获取角色标签类型
+const getRoleType = (role?: string) => {
+  const types: Record<string, string> = {
+    'admin': 'danger',
+    'manager': 'warning',
+    'cashier': 'success'
+  }
+  return types[role || ''] || 'info'
 }
+
+// 获取角色文本
+const getRoleText = (role?: string) => {
+  const texts: Record<string, string> = {
+    'admin': '系统管理员',
+    'manager': '商品管理员',
+    'cashier': '收银员'
+  }
+  return texts[role || ''] || '未知角色'
+}
+
+// 退出登录
+const logout = () => {
+  localStorage.removeItem('isLoggedIn')
+  localStorage.removeItem('userInfo')
+  currentUser.value = null
+  isLoggedIn.value = false
+  ElMessage.success('已退出登录')
+  router.push('/login')
+}
+
+// 生命周期
+onMounted(() => {
+  checkLoginStatus()
+})
 </script>
 
 <style>
@@ -118,6 +238,11 @@ body {
 .logo h2 {
   font-size: 1.3rem;
   font-weight: 600;
+}
+
+.user-role {
+  margin-top: 8px;
+  text-align: center;
 }
 
 .nav-menu {
