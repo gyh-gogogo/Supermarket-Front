@@ -37,9 +37,9 @@ public interface MemberMapper extends BaseMapper<Member> {
     /**
      * 插入会员
      */
-    @Insert("INSERT INTO members (member_name, phone_number, id_card, birthday, gender, member_level, " +
+    @Insert("INSERT INTO members (member_name, phone, id_card, birthday,  member_level, " +
             "points, total_spent, registered_at, last_visit, remarks) VALUES " +
-            "(#{memberName}, #{phoneNumber}, #{idCard}, #{birthday}, #{gender}, #{memberLevel}, " +
+            "(#{memberName}, #{phone}, #{idCard}, #{birthday},  #{memberLevel}, " +
             "#{points}, #{totalSpent}, #{registeredAt}, #{lastVisit}, #{remarks})")
     @Options(useGeneratedKeys = true, keyProperty = "memberId")
     int insert(Member member);
@@ -119,20 +119,14 @@ public interface MemberMapper extends BaseMapper<Member> {
     List<Map<String, Object>> getRecentRegistrations(@Param("limit") Integer limit);
 
     /**
-     * 根据手机号查询会员
-     */
-    @Select("SELECT * FROM members WHERE phone = #{phone} AND status = 'active'")
-    Member selectByPhone(@Param("phone") String phone);
-
-    /**
      * 创建会员（返回自增ID）
      */
     @Insert("INSERT INTO members (member_code, member_name, phone, points, total_consumption, " +
-            "member_level, status, created_at, updated_at) VALUES " +
+            "member_level, status, email,created_at, updated_at) VALUES " +
             "(#{memberCode}, #{memberName}, #{phone}, #{points}, #{totalConsumption}, " +
-            "#{memberLevel}, #{status}, #{createdAt}, #{updatedAt})")
+            "#{memberLevel}, #{status}, #{email},#{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "memberId")
-    int insertMember(Member member);
+    boolean insertMember(Member member);
 
     /**
      * 更新会员信息
@@ -219,4 +213,29 @@ public interface MemberMapper extends BaseMapper<Member> {
     @Select("SELECT * FROM members WHERE MONTH(birthday) = #{month} AND status = 'active' " +
             "ORDER BY DAY(birthday)")
     List<Member> getMembersByBirthMonth(@Param("month") Integer month);
+
+    /**
+     * 获取最近注册统计
+     */
+    @Select("SELECT DATE(created_at) as date, COUNT(*) as count " +
+            "FROM members " +
+            "WHERE created_at >= DATE_SUB(NOW(), INTERVAL #{limit} DAY) " +
+            "GROUP BY DATE(created_at) " +
+            "ORDER BY date DESC")
+    List<Map<String, Object>> getRecentRegistrations(@Param("limit") int limit);
+
+    /**
+     * 根据手机号查询会员
+     */
+    @Select("SELECT * FROM members WHERE phone = #{phone} AND status = 'active' LIMIT 1")
+    Member selectByPhone(@Param("phone") String phone);
+
+    /**
+     * 获取会员等级统计
+     */
+    @Select("SELECT member_level, COUNT(*) as count " +
+            "FROM members " +
+            "WHERE status = 'active' " +
+            "GROUP BY member_level")
+    List<Map<String, Object>> getMemberLevelStatistics();
 }

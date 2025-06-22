@@ -4,7 +4,7 @@
     <div class="welcome-banner">
       <div class="welcome-content">
         <h1>🏪 超市管理系统</h1>
-        <p>{{ getGreeting() }}，欢迎使用超市管理系统！</p>
+        <p>{{ getGreeting() }}，{{ currentUser?.name }}！欢迎使用超市管理系统</p>
         <div class="current-time">{{ currentTime }}</div>
       </div>
       <div class="system-status">
@@ -61,28 +61,28 @@
     </div>
 
     <!-- 快捷操作区域 -->
-    <div class="quick-actions">
+    <div class="quick-actions" v-if="hasAnyPermission(['cashier', 'products', 'members', 'reports'])">
       <h2>⚡ 快捷操作</h2>
       <div class="actions-grid">
-        <div class="action-item" @click="navigateTo('/cashier')">
+        <div v-if="hasPermission('cashier')" class="action-item" @click="navigateTo('/cashier')">
           <div class="action-icon">🛒</div>
           <div class="action-title">收银台</div>
           <div class="action-desc">快速收银结算</div>
         </div>
         
-        <div class="action-item" @click="navigateTo('/products')">
+        <div v-if="hasPermission('products')" class="action-item" @click="navigateTo('/products')">
           <div class="action-icon">📦</div>
           <div class="action-title">商品管理</div>
           <div class="action-desc">添加、编辑商品</div>
         </div>
         
-        <div class="action-item" @click="navigateTo('/members')">
+        <div v-if="hasPermission('members')" class="action-item" @click="navigateTo('/members')">
           <div class="action-icon">👤</div>
           <div class="action-title">会员管理</div>
           <div class="action-desc">会员信息维护</div>
         </div>
         
-        <div class="action-item" @click="navigateTo('/reports')">
+        <div v-if="hasPermission('reports')" class="action-item" @click="navigateTo('/reports')">
           <div class="action-icon">📈</div>
           <div class="action-title">销售报表</div>
           <div class="action-desc">查看销售数据</div>
@@ -90,44 +90,37 @@
       </div>
     </div>
 
-    <!-- 最近活动 -->
-    <div class="recent-section">
-      <div class="recent-activities">
-        <h3>🕒 最近活动</h3>
-        <div class="activity-list">
-          <div v-for="activity in recentActivities" :key="activity.id" class="activity-item">
-            <div class="activity-icon">{{ activity.icon }}</div>
-            <div class="activity-content">
-              <div class="activity-title">{{ activity.title }}</div>
-              <div class="activity-time">{{ activity.time }}</div>
-            </div>
-          </div>
-        </div>
+    <!-- 角色专属信息 -->
+    <div class="role-specific-info">
+      <div v-if="currentUser?.role === 'admin'" class="admin-panel">
+        <h3>🔧 管理员专区</h3>
+        <p>您拥有系统所有权限，可以管理用户、商品、会员和查看所有报表。</p>
       </div>
-
-      <!-- 库存预警 -->
-      <div class="inventory-alerts" v-if="lowStockProducts.length > 0">
-        <h3>⚠️ 库存预警</h3>
-        <div class="alert-list">
-          <div v-for="product in lowStockProducts" :key="product.id" class="alert-item">
-            <div class="alert-content">
-              <div class="alert-title">{{ product.name }}</div>
-              <div class="alert-desc">库存仅剩 {{ product.stock }} 件</div>
-            </div>
-            <el-button type="warning" size="small">补货</el-button>
-          </div>
-        </div>
+      
+      <div v-if="currentUser?.role === 'manager'" class="manager-panel">
+        <h3>📊 管理员专区</h3>
+        <p>您可以管理商品信息和查看销售报表。</p>
+      </div>
+      
+      <div v-if="currentUser?.role === 'cashier'" class="cashier-panel">
+        <h3>💰 收银员专区</h3>
+        <p>欢迎使用收银系统，请点击上方收银台开始工作。</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElButton } from 'element-plus'
 
 const router = useRouter()
+
+// 获取当前用户信息
+const currentUser = computed(() => {
+  const userInfo = localStorage.getItem('userInfo')
+  return userInfo ? JSON.parse(userInfo) : null
+})
 
 // 响应式数据
 const currentTime = ref('')
@@ -141,38 +134,14 @@ const todayStats = reactive({
   members: 896
 })
 
-const recentActivities = ref([
-  {
-    id: 1,
-    icon: '💰',
-    title: '收银员张三完成了一笔¥156.80的交易',
-    time: '5分钟前'
-  },
-  {
-    id: 2,
-    icon: '📦',
-    title: '商品"可口可乐500ml"库存不足',
-    time: '15分钟前'
-  },
-  {
-    id: 3,
-    icon: '👤',
-    title: '新增会员：李四',
-    time: '30分钟前'
-  },
-  {
-    id: 4,
-    icon: '📈',
-    title: '今日销售额已突破¥10,000',
-    time: '2小时前'
-  }
-])
+// 权限检查方法
+const hasPermission = (permission: string) => {
+  return currentUser.value?.permissions?.includes(permission) || false
+}
 
-const lowStockProducts = ref([
-  { id: 1, name: '可口可乐500ml', stock: 8 },
-  { id: 2, name: '农夫山泉550ml', stock: 15 },
-  { id: 3, name: '康师傅方便面', stock: 5 }
-])
+const hasAnyPermission = (permissions: string[]) => {
+  return permissions.some(permission => hasPermission(permission))
+}
 
 // 方法
 const getGreeting = () => {
@@ -210,6 +179,7 @@ let timeInterval: number
 onMounted(() => {
   updateTime()
   timeInterval = window.setInterval(updateTime, 1000)
+  console.log('🎯 仪表盘页面已加载，当前用户:', currentUser.value)
 })
 
 onUnmounted(() => {
@@ -523,6 +493,40 @@ onUnmounted(() => {
 .alert-desc {
   font-size: 0.8rem;
   color: #666;
+}
+
+.role-specific-info {
+  margin-top: 30px;
+}
+
+.admin-panel, .manager-panel, .cashier-panel {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+}
+
+.admin-panel {
+  border-left: 4px solid #e74c3c;
+}
+
+.manager-panel {
+  border-left: 4px solid #f39c12;
+}
+
+.cashier-panel {
+  border-left: 4px solid #27ae60;
+}
+
+.role-specific-info h3 {
+  margin: 0 0 15px 0;
+  color: #2c3e50;
+}
+
+.role-specific-info p {
+  margin: 0;
+  color: #666;
+  line-height: 1.6;
 }
 
 @media (max-width: 768px) {

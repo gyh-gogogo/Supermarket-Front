@@ -1,93 +1,58 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.supermarket.mapper.MemberMapper">
-    
+
     <!-- 结果映射 -->
-    <resultMap id="BaseResultMap" type="com.supermarket.entity.Member">
-        <id column="member_id" property="memberId" jdbcType="BIGINT"/>
-        <result column="member_name" property="memberName" jdbcType="VARCHAR"/>
-        <result column="phone" property="phone" jdbcType="VARCHAR"/>
-        <result column="member_level" property="memberLevel" jdbcType="VARCHAR"/>
-        <result column="points" property="points" jdbcType="INTEGER"/>
-        <result column="total_spent" property="totalConsumption" jdbcType="DECIMAL"/>
-        <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
-        <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
+    <resultMap id="MemberResultMap" type="com.supermarket.entity.Member">
+        <id column="member_id" property="memberId"/>
+        <result column="member_code" property="memberCode"/>
+        <result column="member_name" property="memberName"/>
+        <result column="phone" property="phone"/>
+        <result column="points" property="points"/>
+        <result column="total_consumption" property="totalConsumption"/>
+        <result column="member_level" property="memberLevel"/>
+        <result column="status" property="status"/>
+        <result column="created_at" property="createdAt"/>
+        <result column="updated_at" property="updatedAt"/>
     </resultMap>
 
-    <!-- 基础SQL片段 -->
-    <sql id="Base_Column_List">
-        member_id, member_name, phone_number, id_card, birthday, gender,
-        member_level, points, total_spent, registered_at, last_visit, remarks,
-        created_at, updated_at
-    </sql>
-
-    <!-- 根据等级查询会员 -->
-    <select id="selectByLevel" parameterType="java.lang.String" resultMap="BaseResultMap">
-        select <include refid="Base_Column_List"/>
-        from members
-        where member_level = #{memberLevel}
-        order by registered_at desc
+    <!-- 分页查询会员 -->
+    <select id="selectMemberPage" resultMap="MemberResultMap">
+        SELECT * FROM members 
+        WHERE status = 'active'
+        <if test="memberName != null and memberName != ''">
+            AND member_name LIKE CONCAT('%', #{memberName}, '%')
+        </if>
+        <if test="phone != null and phone != ''">
+            AND phone LIKE CONCAT('%', #{phone}, '%')
+        </if>
+        <if test="memberLevel != null and memberLevel != ''">
+            AND member_level = #{memberLevel}
+        </if>
+        ORDER BY created_at DESC
     </select>
 
-    <!-- 关键词搜索会员 -->
-    <select id="searchByKeyword" parameterType="java.lang.String" resultMap="BaseResultMap">
-        select <include refid="Base_Column_List"/>
-        from members
-        where member_name like concat('%', #{keyword}, '%')
-           or phone_number like concat('%', #{keyword}, '%')
-        order by registered_at desc
-    </select>
-
-    <!-- 统计所有会员数量 -->
-    <select id="countAll" resultType="java.lang.Integer">
-        select count(*) from members
-    </select>
-
-    <!-- 按等级统计会员数量 -->
-    <select id="countByLevel" parameterType="java.lang.String" resultType="java.lang.Integer">
-        select count(*) from members where member_level = #{memberLevel}
-    </select>
-
-    <!-- 统计本月新增会员 -->
-    <select id="countNewMembersThisMonth" resultType="java.lang.Integer">
-        select count(*) from members 
-        where date_format(registered_at, '%Y-%m') = date_format(now(), '%Y-%m')
-    </select>
-
-    <!-- 统计活跃会员 -->
-    <select id="countActiveMembersInDays" parameterType="java.lang.Integer" resultType="java.lang.Integer">
-        select count(*) from members 
-        where last_visit >= date_sub(now(), interval #{days} day)
-    </select>
-
-    <!-- 获取平均消费金额 -->
-    <select id="getAverageConsumption" resultType="java.math.BigDecimal">
-        select avg(total_spent) from members where total_spent > 0
+    <!-- 根据手机号查询会员 -->
+    <select id="selectByPhone" parameterType="string" resultMap="MemberResultMap">
+        SELECT * FROM members 
+        WHERE phone = #{phone} AND status = 'active' 
+        LIMIT 1
     </select>
 
     <!-- 获取消费排行榜 -->
-    <select id="selectTopSpendingMembers" parameterType="java.lang.Integer" resultMap="BaseResultMap">
-        select <include refid="Base_Column_List"/>
-        from members
-        where total_spent > 0
-        order by total_spent desc
-        limit #{limit}
+    <select id="getTopSpendingMembers" parameterType="int" resultMap="MemberResultMap">
+        SELECT * FROM members 
+        WHERE status = 'active' AND total_consumption > 0
+        ORDER BY total_consumption DESC 
+        LIMIT #{limit}
     </select>
 
-    <!-- 获取最近注册的会员 -->
-    <select id="selectRecentRegisteredMembers" parameterType="java.lang.Integer" resultMap="BaseResultMap">
-        select <include refid="Base_Column_List"/>
-        from members
-        order by registered_at desc
-        limit #{limit}
-    </select>
-
-    <!-- 获取最近注册记录（用于活动展示） -->
-    <select id="getRecentRegistrations" parameterType="java.lang.Integer" resultType="java.util.Map">
-        select member_id, member_name, phone_number, registered_at
-        from members
-        order by registered_at desc
-        limit #{limit}
+    <!-- 获取最近注册会员 -->
+    <select id="getRecentRegisteredMembers" parameterType="int" resultMap="MemberResultMap">
+        SELECT * FROM members 
+        WHERE status = 'active'
+        ORDER BY created_at DESC 
+        LIMIT #{limit}
     </select>
 
 </mapper>

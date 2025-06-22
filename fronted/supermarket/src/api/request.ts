@@ -1,10 +1,10 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 
-// 创建axios实例 - 连接SpringBoot后端
+// 创建axios实例
 const request = axios.create({
-  baseURL: 'http://localhost:8080/api',  // SpringBoot默认端口8080
-  timeout: 15000,
+  baseURL: '/api',
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json'
   }
@@ -12,60 +12,26 @@ const request = axios.create({
 
 // 请求拦截器
 request.interceptors.request.use(
-  config => {
-    console.log('📤 调用SpringBoot API:', config.method?.toUpperCase(), config.url)
-    console.log('📤 请求参数:', config.params || config.data)
-    
-    // 添加认证token（如果有）
-    const token = localStorage.getItem('supermarket_token')
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    
+  (config) => {
+    console.log('📤 发送请求:', config.method?.toUpperCase(), config.url, config.data || config.params)
     return config
   },
-  error => {
-    console.error('❌ 请求拦截器错误:', error)
+  (error) => {
+    console.error('❌ 请求错误:', error)
     return Promise.reject(error)
   }
 )
 
-// 响应拦截器 - 处理SpringBoot返回的Result格式
+// 响应拦截器
 request.interceptors.response.use(
-  response => {
-    console.log('📥 SpringBoot响应:', response.config.url, response.status)
-    console.log('📥 响应数据:', response.data)
-    
-    const data = response.data
-    
-    // 处理SpringBoot的Result<T>格式
-    if (data && typeof data === 'object') {
-      // 标准的Result格式：{ success: boolean, data: T, message: string }
-      if (data.hasOwnProperty('success')) {
-        if (data.success) {
-          return data // 成功直接返回
-        } else {
-          // 业务错误，显示后端返回的错误信息
-          const errorMsg = data.message || '操作失败'
-          ElMessage.error(errorMsg)
-          return Promise.reject(new Error(errorMsg))
-        }
-      }
-      
-      // 直接返回数据的情况（比如/test/hello接口）
-      return {
-        success: true,
-        data: data,
-        message: '请求成功'
-      }
-    }
-    
+  (response) => {
+    console.log('📥 收到响应:', response.status, response.data)
     return response.data
   },
-  error => {
-    console.error('❌ SpringBoot API错误:', error)
+  (error) => {
+    console.error('❌ 响应错误:', error)
     
-    let errorMessage = '网络连接失败'
+    let errorMessage = '网络请求失败'
     
     if (error.response) {
       const { status, data } = error.response
@@ -92,17 +58,10 @@ request.interceptors.response.use(
       }
     } else if (error.request) {
       console.error('❌ 网络请求失败:', error.request)
-      errorMessage = `SpringBoot后端连接失败！
-
-🔧 请检查：
-1. SpringBoot服务是否启动 (http://localhost:8080)
-2. 端口8080是否正确
-3. 数据库连接是否正常
-
-💡 解决方案：
-- 启动SpringBoot: mvn spring-boot:run
-- 检查后端日志输出
-- 确认application.yml配置`
+      errorMessage = `SpringBoot后端连接失败！请检查：
+      1. SpringBoot服务是否启动 (端口8080)
+      2. 网络连接是否正常
+      3. 防火墙设置是否正确`
     } else {
       errorMessage = error.message || '未知错误'
     }
@@ -118,8 +77,6 @@ request.interceptors.response.use(
     return Promise.reject(error)
   }
 )
-
-export default request
 
 // 测试SpringBoot连接
 export const testSpringBootConnection = async () => {
@@ -140,17 +97,29 @@ export const showMessage = (message: string, type: 'success' | 'warning' | 'erro
   ElMessage({ message, type, duration: 3000, showClose: true })
 }
 
+// 删除消息提示
 export const deleteMessage = {
-  confirm: (itemName: string, type: string) => {
-    return `确定要删除 "${itemName}" 这个${type}吗？删除后无法恢复！`
+  confirm: (name: string, type: string) => {
+    return `
+      <div style="text-align: center; padding: 20px;">
+        <div style="font-size: 48px; margin-bottom: 20px;">⚠️</div>
+        <h3 style="color: #dc2626; margin-bottom: 15px;">危险操作警告</h3>
+        <p style="margin-bottom: 10px;">您正在执行<strong style="color: #dc2626;">物理删除</strong>操作</p>
+        <p style="margin-bottom: 15px;">确定要永久删除${type}：<strong style="color: #2563eb;">${name}</strong> 吗？</p>
+        <div style="background: #fee2e2; padding: 15px; border-radius: 8px; margin-top: 15px;">
+          <p style="color: #dc2626; margin: 0; font-weight: bold;">⚠️ 此操作不可撤销，请谨慎操作！</p>
+        </div>
+      </div>
+    `
   },
   
-  success: (itemName: string, type: string) => {
+  success: (name: string, type: string) => {
     ElMessage({
-      message: `${type} "${itemName}" 删除成功`,
+      message: `${type}"${name}"已永久删除`,
       type: 'success',
       duration: 3000,
-      showClose: true
+      showClose: true,
+      customClass: 'delete-success-message'
     })
   },
   
@@ -158,10 +127,11 @@ export const deleteMessage = {
     ElMessage({
       message: `删除失败: ${message}`,
       type: 'error',
-      duration: 5000,
-      showClose: true
+      duration: 4000,
+      showClose: true,
+      customClass: 'delete-error-message'
     })
   }
 }
 
-
+export default request

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.supermarket.entity.Member;
+import com.supermarket.mapper.MemberMapper;
 import com.supermarket.service.MemberService;
 import com.supermarket.common.Result;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -25,15 +27,22 @@ public class MemberController {
     @Autowired
     private MemberService memberService;
 
-    // 分页查询会员
+    @Autowired
+    private MemberMapper memberMapper;
+
+    /**
+     * 分页查询会员
+     */
     @GetMapping("/page")
     public Result<IPage<Member>> getPage(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
             @RequestParam(required = false) String memberName,
-            @RequestParam(required = false) String phone) {
+            @RequestParam(required = false) String phone,
+            @RequestParam(required = false) String memberLevel) {
         try {
             System.out.println("👥 分页查询会员 - 页码:" + current + ", 大小:" + size);
+            System.out.println("🔍 查询条件 - 姓名:" + memberName + ", 手机:" + phone + ", 等级:" + memberLevel);
             
             Page<Member> page = new Page<>(current, size);
             QueryWrapper<Member> queryWrapper = new QueryWrapper<>();
@@ -43,6 +52,9 @@ public class MemberController {
             }
             if (phone != null && !phone.trim().isEmpty()) {
                 queryWrapper.like("phone", phone.trim());
+            }
+            if (memberLevel != null && !memberLevel.trim().isEmpty()) {
+                queryWrapper.eq("member_level", memberLevel.trim());
             }
             
             queryWrapper.eq("status", "active");
@@ -56,19 +68,6 @@ public class MemberController {
         } catch (Exception e) {
             e.printStackTrace();
             return Result.error("查询失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 获取所有会员
-     */
-    @GetMapping
-    public Result<List<Member>> getAllMembers() {
-        try {
-            List<Member> members = memberService.getAllMembers();
-            return Result.success(members);
-        } catch (Exception e) {
-            return Result.error("获取会员列表失败: " + e.getMessage());
         }
     }
 
@@ -90,39 +89,44 @@ public class MemberController {
     }
 
     /**
-     * 添加会员
+     * 添加会员 - 移除所有权限检查
      */
-    @PostMapping
+    @PostMapping()
     public Result<Member> create(@RequestBody Member member) {
         try {
-            System.out.println("创建会员: " + member.getMemberName());
-            
+            System.out.println("🎯 MemberController.create 被调用");
+            System.out.println("📋 接收到的会员数据: " + member);
+            // 基础数据验证
+            if (member.getMemberName() == null || member.getMemberName().trim().isEmpty()) {
+                System.out.println("❌ 会员姓名为空");
+                return Result.error("会员姓名不能为空");
+            }
+            if (member.getPhone() == null || member.getPhone().trim().isEmpty()) {
+                System.out.println("❌ 手机号为空");
+                return Result.error("手机号不能为空");
+            }
             // 检查手机号是否已存在
             QueryWrapper<Member> checkQuery = new QueryWrapper<>();
             checkQuery.eq("phone", member.getPhone());
             long phoneCount = memberService.count(checkQuery);
             if (phoneCount > 0) {
+                System.out.println("❌ 手机号已存在: " + member.getPhone());
                 return Result.error("手机号已存在");
             }
             
-            // 生成会员卡号
-            String memberCode = "M" + System.currentTimeMillis();
-            member.setMemberCode(memberCode);
-            member.setStatus("active");
-            member.setPoints(0);
-            member.setTotalConsumption(0.0);
-            member.setMemberLevel("普通会员");
-            member.setCreatedAt(LocalDateTime.now());
-            member.setUpdatedAt(LocalDateTime.now());
+            System.out.println("✅ 数据验证通过，开始保存会员");
+            member.setMemberCode("M" + System.currentTimeMillis());
+            boolean success = memberMapper.insertMember(member);
             
-            boolean success = memberService.save(member);
             if (success) {
-                System.out.println("✅ 会员创建成功，卡号: " + memberCode);
+                System.out.println("✅ 会员创建成功，ID: " + member.getMemberId());
                 return Result.success("创建成功", member);
             } else {
+                System.out.println("❌ 会员创建失败");
                 return Result.error("创建失败");
             }
         } catch (Exception e) {
+            System.err.println("❌ MemberController.create 异常: " + e.getMessage());
             e.printStackTrace();
             return Result.error("创建失败: " + e.getMessage());
         }
@@ -167,62 +171,127 @@ public class MemberController {
         }
     }
 
-    // 获取所有会员列表
-    @GetMapping("/list")
-    public Result<List<Member>> getList() {
+    /**
+     * 根据手机号查询会员 - 收银台专用
+     */
+    @GetMapping("/phone/{phone}")
+    public Result<Member> getMemberByPhone(@PathVariable String phone) {
         try {
-            QueryWrapper<Member> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("status", "active");
-            queryWrapper.orderByDesc("created_at");
+            System.out.println("📱 根据手机号查询会员: " + phone);
             
-            List<Member> members = memberService.list(queryWrapper);
-            return Result.success(members);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Result.error("查询失败: " + e.getMessage());
-        }
-    }
-
-
-
-    // 更新会员积分
-    @PutMapping("/{id}/points")
-    public Result<Member> updatePoints(@PathVariable Long id, @RequestBody Map<String, Integer> request) {
-        try {
-            Integer points = request.get("points");
-            System.out.println("💎 更新会员积分:" + id + ", 积分:" + points);
+            Member member = memberService.getMemberByPhone(phone);
             
-            boolean success = memberService.updateMemberPoints(id, points);
-            if (success) {
-                Member updatedMember = memberService.getById(id);
-                return Result.success("积分更新成功", updatedMember);
+            if (member != null) {
+                System.out.println("✅ 找到会员: " + member.getMemberName());
+                return Result.success("查询成功", member);
             } else {
-                return Result.error("积分更新失败");
+                return Result.error("未找到该手机号对应的会员");
             }
         } catch (Exception e) {
             e.printStackTrace();
-            return Result.error("积分更新失败: " + e.getMessage());
-        }
-    }
-
-    // 会员消费记录
-    @GetMapping("/{id}/consumption")
-    public Result<List<Map<String, Object>>> getConsumptionHistory(@PathVariable Long id) {
-        try {
-            System.out.println("📊 查询会员消费记录:" + id);
-            
-            // 这里可以实现具体的消费记录查询逻辑
-            // 暂时返回空列表
-            List<Map<String, Object>> consumptionHistory = new ArrayList<>();
-            
-            return Result.success(consumptionHistory);
-        } catch (Exception e) {
-            e.printStackTrace();
             return Result.error("查询失败: " + e.getMessage());
         }
     }
 
-    // 获取消费排行榜
+    /**
+     * 会员积分操作（增加或扣减）
+     */
+    @PostMapping("/{id}/points/operation")
+    public Result<Member> pointsOperation(
+            @PathVariable Long id, 
+            @RequestBody Map<String, Object> request) {
+        try {
+            String operation = (String) request.get("operation");
+            Integer points = null;
+            
+            // 处理points参数的类型转换
+            Object pointsObj = request.get("points");
+            if (pointsObj instanceof Integer) {
+                points = (Integer) pointsObj;
+            } else if (pointsObj instanceof Double) {
+                points = ((Double) pointsObj).intValue();
+            } else if (pointsObj instanceof String) {
+                points = Integer.parseInt((String) pointsObj);
+            }
+            
+            String remark = (String) request.get("remark");
+            
+            System.out.println("💎 会员积分操作: " + id + ", 操作: " + operation + ", 积分: " + points);
+            
+            if (points == null || points <= 0) {
+                return Result.error("积分数量必须大于0");
+            }
+            
+            Member member = memberService.getById(id);
+            if (member == null) {
+                return Result.error("会员不存在");
+            }
+            
+            Integer currentPoints = member.getPoints() != null ? member.getPoints() : 0;
+            Integer newPoints;
+            
+            if ("add".equals(operation)) {
+                newPoints = currentPoints + points;
+            } else if ("subtract".equals(operation)) {
+                newPoints = Math.max(0, currentPoints - points); // 积分不能为负
+            } else {
+                return Result.error("无效的操作类型，只支持add或subtract");
+            }
+            
+            boolean success = memberService.updateMemberPoints(id, newPoints);
+            if (success) {
+                Member updatedMember = memberService.getById(id);
+                System.out.println("✅ 积分操作成功，当前积分: " + newPoints);
+                return Result.success("积分操作成功", updatedMember);
+            } else {
+                return Result.error("积分操作失败");
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("积分操作失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取会员等级列表
+     */
+    @GetMapping("/levels")
+    public Result<List<Map<String, String>>> getMemberLevels() {
+        try {
+            System.out.println("📊 获取会员等级列表");
+            
+            List<Map<String, String>> levels = new ArrayList<>();
+            levels.add(Map.of("value", "bronze", "label", "普通会员"));
+            levels.add(Map.of("value", "silver", "label", "银卡会员"));
+            levels.add(Map.of("value", "gold", "label", "金卡会员"));
+            levels.add(Map.of("value", "diamond", "label", "钻石会员"));
+            
+            return Result.success("获取成功", levels);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取会员统计信息
+     */
+    @GetMapping("/statistics")
+    public Result<Map<String, Object>> getMemberStatistics() {
+        try {
+            System.out.println("📊 获取会员统计信息");
+            
+            Map<String, Object> statistics = memberService.getMemberStatistics();
+            return Result.success("获取成功", statistics);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取统计信息失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 获取消费排行榜
+     */
     @GetMapping("/top-spending")
     public Result<List<Member>> getTopSpendingMembers(@RequestParam(defaultValue = "10") Integer limit) {
         try {
@@ -236,7 +305,9 @@ public class MemberController {
         }
     }
 
-    // 获取最近注册的会员
+    /**
+     * 获取最近注册的会员
+     */
     @GetMapping("/recent")
     public Result<List<Member>> getRecentRegisteredMembers(@RequestParam(defaultValue = "10") Integer limit) {
         try {
@@ -247,6 +318,19 @@ public class MemberController {
         } catch (Exception e) {
             e.printStackTrace();
             return Result.error("查询失败: " + e.getMessage());
+        }    }
+    /**
+     * 测试会员创建接口
+     */
+    @PostMapping("/test-create")
+    public Result<String> testCreate(@RequestBody Map<String, Object> data) {
+        try {
+            System.out.println("🧪 测试创建会员接口被调用");
+            System.out.println("📋 接收数据: " + data);
+            return Result.success("测试接口正常工作");
+        } catch (Exception e) {
+            System.err.println("❌ 测试接口异常: " + e.getMessage());
+            return Result.error("测试接口异常: " + e.getMessage());
         }
     }
 }

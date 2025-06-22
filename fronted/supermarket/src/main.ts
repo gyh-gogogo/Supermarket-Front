@@ -1,8 +1,10 @@
 import { createApp } from 'vue'
-import { createRouter, createWebHistory } from 'vue-router'
+import { createPinia } from 'pinia'
 import ElementPlus from 'element-plus'
 import 'element-plus/dist/index.css'
 import App from './App.vue'
+import router from './router'
+import './style.css'
 
 // 使用懒加载导入页面组件，避免循环依赖
 const Dashboard = () => import('./views/Dashboard.vue')
@@ -45,17 +47,15 @@ const routes = [
   }
 ]
 
-const router = createRouter({
-  history: createWebHistory(),
-  routes
-})
-
 const app = createApp(App)
 
+app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
 
 app.mount('#app')
 
+console.log('🏪 超市管理系统前端启动成功！')
+console.log('📱 访问地址: http://localhost:3000')
 console.log('🏪 超市管理系统前端启动成功！')
 console.log('📱 访问地址: http://localhost:3000')

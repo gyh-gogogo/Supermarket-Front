@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [vue()],
   resolve: {
@@ -11,20 +11,30 @@ export default defineConfig({
     }
   },
   server: {
+    host: '0.0.0.0',
     port: 3000,
-    host: true,
-    open: true,
-    cors: true,
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, '/api')
+        secure: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('❌ 代理错误:', err)
+          })
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('📤 发送请求:', req.method, req.url)
+          })
+          proxy.on('proxyRes', (proxyRes, req, _res) => {
+            console.log('📥 收到响应:', proxyRes.statusCode, req.url)
+          })
+        }
       }
     }
   },
   build: {
     outDir: 'dist',
+    assetsDir: 'assets',
     sourcemap: false,
     minify: 'terser',
     rollupOptions: {

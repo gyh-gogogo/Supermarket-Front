@@ -5,110 +5,100 @@ export interface Member {
   memberId?: number
   memberCode?: string
   memberName: string
-  phone: string  // 对应SpringBoot的phone字段
+  phone: string
+  email?: string
+  memberLevel: string
   points?: number
   totalConsumption?: number
-  memberLevel?: string
   status?: string
   createdAt?: string
   updatedAt?: string
 }
 
 export const memberApi = {
-  // 分页查询会员 - 调用SpringBoot MemberController的getPage方法
+  // 分页查询会员 - 确保参数名称与后端一致
   getPage: (params: {
     current?: number
     size?: number
-    memberName?: string
-    phone?: string
+    memberName?: string  // 对应后端的memberName参数
+    phone?: string       // 对应后端的phone参数  
+    memberLevel?: string // 对应后端的memberLevel参数
   }) => {
     console.log('👥 调用SpringBoot会员分页API:', params)
-    
-    // 发送到SpringBoot的 GET /api/members/page
-    return request.get('/members/page', { 
-      params: {
-        current: params.current || 1,
-        size: params.size || 10,
-        memberName: params.memberName,
-        phone: params.phone
-      }
-    })
+    return request.get('/api/members/page', { params })
   },
-  
-  // 根据手机号查询会员（收银台专用）- 调用SpringBoot的getByPhone方法
-  getByPhone: (phone: string) => {
-    console.log('📱 调用SpringBoot根据手机号查询会员API:', phone)
-    
-    // 发送到SpringBoot的 GET /api/members/phone/{phone}
-    return request.get(`/members/phone/${phone}`)
-  },
-  
-  // 根据会员卡号查询会员 - 调用SpringBoot的getByMemberCode方法
-  getByMemberCode: (memberCode: string) => {
-    console.log('💳 调用SpringBoot根据会员卡号查询API:', memberCode)
-    
-    // 发送到SpringBoot的 GET /api/members/code/{memberCode}
-    return request.get(`/members/code/${memberCode}`)
-  },
-  
-  // 获取会员列表 - 调用SpringBoot的getList方法
-  getList: () => {
-    console.log('📋 调用SpringBoot会员列表API')
-    
-    // 发送到SpringBoot的 GET /api/members/list
-    return request.get('/members/list')
-  },
-  
-  // 创建会员 - 调用SpringBoot的create方法
+
+  // 创建会员 - 确保不带权限检查
   create: (data: Omit<Member, 'memberId'>) => {
     console.log('➕ 调用SpringBoot创建会员API:', data)
     
-    // 确保数据格式符合SpringBoot期望
+    // 确保数据格式正确，移除所有权限相关字段
     const memberData = {
       memberName: data.memberName,
       phone: data.phone,
-      memberLevel: data.memberLevel || '普通会员',
-      points: data.points || 0,
-      totalConsumption: data.totalConsumption || 0.0,
-      status: data.status || 'active'
+      email: data.email || '',
+      memberLevel: data.memberLevel || 'bronze',
+      points: 0,
+      totalConsumption: 0.0,
+      status: 'active'
     }
     
-    // 发送到SpringBoot的 POST /api/members
-    return request.post('/members', memberData)
+    console.log('📤 实际发送的数据:', memberData)
+    return request.post('/api/members', memberData)
   },
-  
-  // 更新会员 - 调用SpringBoot的update方法
+
+  // 更新会员 - 对应后端 MemberController.update
   update: (id: number, data: Member) => {
     console.log('📝 调用SpringBoot更新会员API:', id, data)
-    
-    // 发送到SpringBoot的 PUT /api/members/{id}
-    return request.put(`/members/${id}`, data)
+    return request.put(`/api/members/${id}`, data)
   },
-  
-  // 删除会员 - 调用SpringBoot的delete方法
+
+  // 删除会员 - 对应后端 MemberController.delete
   delete: (id: number) => {
     console.log('🗑️ 调用SpringBoot删除会员API:', id)
-    
-    // 发送到SpringBoot的 DELETE /api/members/{id}
-    return request.delete(`/members/${id}`)
+    return request.delete(`/api/members/${id}`)
   },
-  
-  // 根据ID获取会员 - 调用SpringBoot的getById方法
+
+  // 根据ID获取会员
   getById: (id: number) => {
     console.log('🔍 调用SpringBoot会员详情API:', id)
-    
-    // 发送到SpringBoot的 GET /api/members/{id}
     return request.get(`/members/${id}`)
   },
-  
-  // 更新会员积分 - 调用SpringBoot的updatePoints方法
-  updatePoints: (id: number, points: number) => {
-    console.log('💎 调用SpringBoot更新会员积分API:', id, points)
+
+  // 根据手机号查询会员 - 收银台专用
+  getByPhone: (phone: string) => {
+    console.log('📱 调用根据手机号查询会员API:', phone)
+    return request.get(`/api/members/phone/${phone}`)
+  },
+
+  // 积分操作 - 确保API路径正确
+  updatePoints: (id: number, points: number, operation: 'add' | 'subtract') => {
+    console.log('💎 调用积分操作API:', id, points, operation)
     
-    // 发送到SpringBoot的 PUT /api/members/{id}/points
-    return request.put(`/members/${id}/points`, { points })
+    // 确保参数格式正确
+    const requestData = {
+      points: Number(points),        // 确保是数字类型
+      operation: String(operation),  // 确保是字符串类型
+      remark: ''                     // 可选的操作说明
+    }
+    
+    // 修正API路径 - 确保与后端Controller一致
+    return request.post(`/members/${id}/points/operation`, requestData)
+  },
+
+  // 获取会员等级列表
+  getLevels: () => {
+    console.log('📊 调用会员等级列表API')
+    return request.get('/members/levels')
+  },
+
+  // 获取会员统计信息
+  getStatistics: () => {
+    console.log('📈 调用会员统计API')
+    return request.get('/members/statistics')
   },
   
+
   // 会员消费记录 - 调用SpringBoot的getConsumptionHistory方法
   getConsumptionHistory: (id: number) => {
     console.log('📊 调用SpringBoot会员消费记录API:', id)
@@ -128,10 +118,10 @@ export const memberApi = {
   // 获取最近注册会员 - 调用SpringBoot的getRecentRegisteredMembers方法
   getRecentRegisteredMembers: (limit: number = 10) => {
     console.log('🕒 调用SpringBoot最近注册会员API:', limit)
-    
     // 发送到SpringBoot的 GET /api/members/recent
     return request.get('/members/recent', { params: { limit } })
-  }
+  },
+
 }
 
 

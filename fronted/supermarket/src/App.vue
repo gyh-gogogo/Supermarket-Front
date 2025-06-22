@@ -1,12 +1,12 @@
 <template>
   <div id="app">
     <!-- 登录页面 -->
-    <router-view v-if="!isLoggedIn" />
+    <router-view v-if="$route.path === '/login'" />
     
     <!-- 主应用界面 -->
     <div v-else class="layout">
       <!-- 侧边栏 -->
-      <div class="sidebar">
+      <div v-if="isLoggedIn && currentUser" class="sidebar">
         <div class="logo">
           <h2>🏪 超市管理</h2>
           <div class="user-role">
@@ -16,7 +16,6 @@
           </div>
         </div>
         <nav class="nav-menu">
-          <!-- 仪表盘 - 管理员和商品管理员可见 -->
           <router-link 
             v-if="hasPermission('dashboard')" 
             to="/dashboard" 
@@ -27,7 +26,6 @@
             <span class="nav-text">仪表盘</span>
           </router-link>
           
-          <!-- 收银台 - 所有角色都可见（收银员主要功能） -->
           <router-link 
             v-if="hasPermission('cashier')" 
             to="/cashier" 
@@ -38,7 +36,6 @@
             <span class="nav-text">收银台</span>
           </router-link>
           
-          <!-- 商品管理 - 管理员和商品管理员可见 -->
           <router-link 
             v-if="hasPermission('products')" 
             to="/products" 
@@ -49,7 +46,6 @@
             <span class="nav-text">商品管理</span>
           </router-link>
           
-          <!-- 会员管理 - 仅管理员可见 -->
           <router-link 
             v-if="hasPermission('members')" 
             to="/members" 
@@ -60,7 +56,6 @@
             <span class="nav-text">会员管理</span>
           </router-link>
           
-          <!-- 销售报表 - 管理员和商品管理员可见 -->
           <router-link 
             v-if="hasPermission('reports')" 
             to="/reports" 
@@ -71,7 +66,6 @@
             <span class="nav-text">销售报表</span>
           </router-link>
           
-          <!-- 用户管理 - 仅管理员可见 -->
           <router-link 
             v-if="hasPermission('users')" 
             to="/users" 
@@ -85,7 +79,7 @@
       </div>
 
       <!-- 主要内容区域 -->
-      <div class="main-content">
+      <div v-if="isLoggedIn && currentUser" class="main-content">
         <!-- 顶部栏 -->
         <header class="header">
           <div class="header-left">
@@ -102,12 +96,24 @@
           <router-view />
         </main>
       </div>
+
+      <!-- 加载状态 -->
+      <div v-else class="loading-container">
+        <div class="loading-content">
+          <h2>🏪 超市管理系统</h2>
+          <p>正在检查登录状态...</p>
+          <div class="loading-spinner"></div>
+          <el-button type="primary" @click="goToLogin" style="margin-top: 20px;">
+            前往登录
+          </el-button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElButton, ElTag, ElMessage } from 'element-plus'
 
@@ -130,16 +136,22 @@ const checkLoginStatus = () => {
   
   if (loginStatus === 'true' && userInfoStr) {
     try {
-      currentUser.value = JSON.parse(userInfoStr)
-      isLoggedIn.value = true
-      console.log('👤 当前用户:', currentUser.value)
+      const userInfo = JSON.parse(userInfoStr)
+      if (userInfo && userInfo.username && userInfo.role) {
+        currentUser.value = userInfo
+        isLoggedIn.value = true
+        console.log('✅ 用户已登录:', userInfo)
+        return true
+      }
     } catch (error) {
-      console.error('用户信息解析失败:', error)
-      logout()
+      console.error('❌ 用户信息解析失败:', error)
     }
-  } else {
-    router.push('/login')
   }
+  
+  console.log('❌ 用户未登录或信息无效')
+  isLoggedIn.value = false
+  currentUser.value = null
+  return false
 }
 
 // 权限检查
@@ -188,7 +200,12 @@ const logout = () => {
   localStorage.removeItem('userInfo')
   currentUser.value = null
   isLoggedIn.value = false
-  ElMessage.success('已退出登录')
+  router.push('/login')
+  ElMessage.success('已安全退出登录')
+}
+
+// 跳转到登录页
+const goToLogin = () => {
   router.push('/login')
 }
 
@@ -196,6 +213,13 @@ const logout = () => {
 onMounted(() => {
   checkLoginStatus()
 })
+
+// 监听路由变化
+watch(() => route.path, () => {
+  if (route.path !== '/login') {
+    checkLoginStatus()
+  }
+}, { immediate: true })
 </script>
 
 <style>
@@ -218,15 +242,17 @@ body {
 .layout {
   display: flex;
   height: 100vh;
+  transition: all 0.3s ease;
 }
 
 .sidebar {
-  width: 250px;
-  background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+  width: 220px;
+  background: #2c3e50;
   color: white;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+  height: 100vh;
+  position: fixed;
+  left: 0;
+  top: 0;
 }
 
 .logo {
@@ -283,7 +309,10 @@ body {
 }
 
 .main-content {
-  flex: 1;
+  margin-left: 220px;
+  width: calc(100vw - 220px);
+  min-height: 100vh;
+  background: #f5f7fa;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -323,6 +352,48 @@ body {
   background: #f5f7fa;
 }
 
+.loading-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+}
+
+.loading-content {
+  text-align: center;
+  background: white;
+  padding: 40px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.loading-content h2 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+}
+
+.loading-content p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #409eff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 @media (max-width: 768px) {
   .sidebar {
     width: 200px;
@@ -345,3 +416,5 @@ body {
   }
 }
 </style>
+
+

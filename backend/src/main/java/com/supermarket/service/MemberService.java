@@ -110,4 +110,10 @@ public interface MemberService extends IService<Member> {
      */
     boolean validateMemberExists(String phoneNumber);
 
+    /**
+     * 根据手机号查询会员
+     * @param phone 手机号
+     * @return 会员信息
+     */
+    Member getMemberByPhone(String phone);
 }

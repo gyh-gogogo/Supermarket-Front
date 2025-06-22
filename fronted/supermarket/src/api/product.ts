@@ -3,7 +3,7 @@ import request from './request'
 export interface Product {
   productId?: number
   productName: string
-  barcode?: string
+  barcode: string
   price: number
   costPrice?: number
   stockQuantity: number
@@ -11,42 +11,41 @@ export interface Product {
   description?: string
   status?: string
   createdAt?: string
-  updatedAt?: string
-}
-
-export interface ProductPageParams {
-  current: number
-  size: number
-  productName?: string
 }
 
 export const productApi = {
   // 分页查询商品
-  getPage(params: ProductPageParams) {
-    console.log('🔍 调用商品分页API:', params)
+  getPage: (params: any) => {
+    console.log('📄 调用商品分页API:', params)
     return request.get('/products/page', { params })
   },
 
   // 创建商品
-  create(data: Product) {
+  create: (data: Product) => {
     console.log('➕ 调用创建商品API:', data)
     return request.post('/products', data)
   },
 
   // 更新商品
-  update(id: number, data: Product) {
+  update: (id: number, data: Product) => {
     console.log('📝 调用更新商品API:', id, data)
     return request.put(`/products/${id}`, data)
   },
 
   // 删除商品
-  delete(id: number) {
+  delete: (id: number) => {
     console.log('🗑️ 调用删除商品API:', id)
     return request.delete(`/products/${id}`)
   },
 
+  // 根据条码查询商品
+  getByBarcode: (barcode: string) => {
+    console.log('🔍 调用条码查询API:', barcode)
+    return request.get(`/products/barcode/${barcode}`)
+  },
+
   // 根据ID获取商品
-  getById(id: number) {
+  getById: (id: number) => {
     console.log('🔍 调用商品详情API:', id)
     return request.get(`/products/${id}`)
   },
