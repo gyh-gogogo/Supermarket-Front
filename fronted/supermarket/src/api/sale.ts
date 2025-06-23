@@ -25,7 +25,7 @@ export interface CheckoutData {
     subtotal: number
   }>
   totalAmount: number
-  discountAmount: number
+  discountAmount: number  // 统一使用这一个字段表示所有优惠金额
   finalAmount: number
   paymentMethod: string
   memberId?: number
@@ -33,27 +33,10 @@ export interface CheckoutData {
 }
 
 export const saleApi = {
-  // 收银结算 - 核心功能
+  // 收银台结算
   checkout: (data: CheckoutData) => {
-    console.log('💰 发送收银结算请求:', data)
-    return request.post('/sales/checkout', data)
-  },
-  
-  // 查询销售记录
-  getPage: (params: {
-    current?: number
-    size?: number
-    saleNumber?: string
-    paymentMethod?: string
-  }) => {
-    console.log('📋 查询销售记录:', params)
-    return request.get('/sales/page', { params })
-  },
-  
-  // 获取销售详情
-  getById: (id: number) => {
-    console.log('📋 获取销售详情:', id)
-    return request.get(`/sales/${id}`)
+    console.log('💰 调用收银台结算API:', data)
+    return request.post('/api/sales/checkout', data)
   }
 }
 
@@ -151,3 +134,4 @@ export const paymentUtils = {
     return `¥${Number(amount).toFixed(2)}`
   }
 }
+

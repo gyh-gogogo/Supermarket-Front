@@ -4,52 +4,52 @@
     
     <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.supermarket.entity.SaleItem">
-        <id column="sale_item_id" property="saleItemId" jdbcType="BIGINT"/>
+        <id column="item_id" property="saleItemId" jdbcType="BIGINT"/>
         <result column="sale_id" property="saleId" jdbcType="BIGINT"/>
         <result column="product_id" property="productId" jdbcType="BIGINT"/>
         <result column="quantity" property="quantity" jdbcType="INTEGER"/>
-        <result column="price" property="price" jdbcType="DECIMAL"/>
-        <result column="subtotal" property="subtotal" jdbcType="DECIMAL"/>
+        <result column="unit_price" property="unitPrice" jdbcType="DECIMAL"/>
+        <result column="total_price" property="subtotal" jdbcType="DECIMAL"/>
     </resultMap>
 
     <!-- 销售明细和商品信息结果映射 -->
     <resultMap id="SaleItemWithProductMap" type="java.util.Map">
-        <result column="sale_item_id" property="saleItemId" jdbcType="BIGINT"/>
+        <result column="item_id" property="saleItemId" jdbcType="BIGINT"/>
         <result column="sale_id" property="saleId" jdbcType="BIGINT"/>
         <result column="product_id" property="productId" jdbcType="BIGINT"/>
         <result column="product_name" property="productName" jdbcType="VARCHAR"/>
         <result column="barcode" property="barcode" jdbcType="VARCHAR"/>
         <result column="quantity" property="quantity" jdbcType="INTEGER"/>
-        <result column="price" property="price" jdbcType="DECIMAL"/>
-        <result column="subtotal" property="subtotal" jdbcType="DECIMAL"/>
+        <result column="unit_price" property="unitPrice" jdbcType="DECIMAL"/>
+        <result column="total_price" property="subtotal" jdbcType="DECIMAL"/>
     </resultMap>
 
     <!-- 基础SQL片段 -->
     <sql id="Base_Column_List">
-        sale_item_id, sale_id, product_id, quantity, price, subtotal
+        item_id, sale_id, product_id, quantity, unit_price, total_price
     </sql>
 
     <!-- 自定义查询方法 - 不与BaseMapper重复 -->
 
     <!-- 根据销售ID获取销售明细 -->
     <select id="getSaleItemsBySaleId" parameterType="java.lang.Long" resultMap="SaleItemWithProductMap">
-        select si.sale_item_id, si.sale_id, si.product_id, si.quantity, si.price, si.subtotal,
+        select si.item_id, si.sale_id, si.product_id, si.quantity, si.unit_price, si.total_price,
                p.product_name, p.barcode
         from sale_items si
         left join products p on si.product_id = p.product_id
         where si.sale_id = #{saleId}
-        order by si.sale_item_id
+        order by si.item_id
     </select>
 
     <!-- 根据商品ID获取销售明细 -->
     <select id="getSaleItemsByProductId" parameterType="java.lang.Long" resultType="java.util.Map">
-        select si.sale_item_id, si.sale_id, si.product_id, si.quantity, si.price, si.subtotal,
-               s.sale_time, s.order_number
+        select si.item_id, si.sale_id, si.product_id, si.quantity, si.unit_price, si.total_price,
+               s.sale_date, s.sale_number
         from sale_items si
         left join sales s on si.sale_id = s.sale_id
         where si.product_id = #{productId}
         and s.status = 'completed'
-        order by s.sale_time desc
+        order by s.sale_date desc
     </select>
 
     <!-- 删除销售明细 -->
@@ -61,7 +61,7 @@
     <select id="getProductSalesStats" parameterType="java.lang.Long" resultType="java.util.Map">
         select product_id,
                sum(quantity) as total_quantity,
-               sum(subtotal) as total_amount,
+               sum(total_price) as total_amount,
                count(distinct sale_id) as order_count
         from sale_items 
         where product_id = #{productId}

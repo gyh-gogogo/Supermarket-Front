@@ -2,7 +2,7 @@ package com.supermarket.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.supermarket.entity.SaleItem;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Mapper;
 
 import java.util.List;
 import java.util.Map;

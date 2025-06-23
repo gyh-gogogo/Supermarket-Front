@@ -9,14 +9,22 @@ export interface Product {
   stockQuantity: number
   minStockLevel?: number
   description?: string
+  categoryId?: number        // 添加分类ID
+  categoryName?: string      // 添加分类名称
   status?: string
   createdAt?: string
+  updatedAt?: string
 }
 
 export const productApi = {
-  // 分页查询商品
-  getPage: (params: any) => {
-    console.log('📄 调用商品分页API:', params)
+  // 分页查询商品 - 支持分类筛选
+  getPage: (params: {
+    current?: number
+    size?: number
+    productName?: string
+    categoryId?: number
+  }) => {
+    console.log('📤 调用商品分页API:', params)
     return request.get('/products/page', { params })
   },
 

@@ -3,8 +3,9 @@ package com.supermarket.entity;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 
 /**
@@ -13,25 +14,37 @@ import java.time.LocalDateTime;
 @Data
 @TableName("sales")
 public class Sale {
-    
     @TableId(type = IdType.AUTO)
     private Long saleId;
     
-    private String orderNumber;
-    private BigDecimal totalAmount;
-    private BigDecimal discountAmount;
-    private BigDecimal finalAmount;
-    private String paymentMethod;
-    private Long cashierId;
-    private Long memberId;
-    private LocalDateTime saleTime;
-    private String status;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private String saleNumber;        // 订单号
+    
+    private Long memberId;            // 会员ID（可为空）
+    
+    private Long cashierId;           // 收银员ID
+    
+    private Double totalAmount;       // 商品总金额
+    
+    private Double discountAmount;    // 优惠金额（包括会员优惠）
+    
+    private Double finalAmount;       // 实收金额
+    
+    private String paymentMethod;     // 支付方式
 
-    // 构造方法
+    private String status;            // 状态：completed, cancelled, refunded
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime saleDate;   // 销售时间
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime createdAt;
+    
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
+    private LocalDateTime updatedAt;
+    
     public Sale() {
-        this.status = "pending";
+        this.status = "completed";
+        this.saleDate = LocalDateTime.now();
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
     }

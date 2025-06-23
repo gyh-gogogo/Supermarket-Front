@@ -37,19 +37,18 @@ public interface MemberMapper extends BaseMapper<Member> {
     /**
      * 插入会员
      */
-    @Insert("INSERT INTO members (member_name, phone, id_card, birthday,  member_level, " +
-            "points, total_spent, registered_at, last_visit, remarks) VALUES " +
-            "(#{memberName}, #{phone}, #{idCard}, #{birthday},  #{memberLevel}, " +
-            "#{points}, #{totalSpent}, #{registeredAt}, #{lastVisit}, #{remarks})")
+    @Insert("INSERT INTO members (member_name, phone,  member_level, " +
+            "points, total_consumption,created_at, updated_at) VALUES " +
+            "(#{memberName}, #{phone},   #{memberLevel}, " +
+            "#{points}, #{totalConsumption}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "memberId")
     int insert(Member member);
 
     /**
      * 更新会员信息
      */
-    @Update("UPDATE members SET member_name = #{memberName}, phone_number = #{phoneNumber}, " +
-            "id_card = #{idCard}, birthday = #{birthday}, gender = #{gender}, " +
-            "member_level = #{memberLevel}, points = #{points}, total_spent = #{totalSpent}, " +
+    @Update("UPDATE members SET member_name = #{memberName}, phone = #{phone}, " +
+            "member_level = #{memberLevel}, points = #{points},total_consumption = #{totalConsumption}, " +
             "last_visit = #{lastVisit}, remarks = #{remarks}, updated_at = #{updatedAt} " +
             "WHERE member_id = #{memberId}")
     int update(Member member);

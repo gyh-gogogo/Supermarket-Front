@@ -5,6 +5,7 @@
     <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.supermarket.entity.Product">
         <id column="product_id" property="productId" jdbcType="BIGINT"/>
+        <result column="category_id" property="categoryId" jdbcType="BIGINT"/>
         <result column="product_name" property="productName" jdbcType="VARCHAR"/>
         <result column="barcode" property="barcode" jdbcType="VARCHAR"/>
         <result column="price" property="price" jdbcType="DECIMAL"/>
@@ -19,7 +20,7 @@
 
     <!-- 基础SQL片段 -->
     <sql id="Base_Column_List">
-        product_id, product_name, barcode, price, cost_price, stock_quantity, 
+        product_id,category_id, product_name, barcode, price, cost_price, stock_quantity,
         min_stock_level, description, status, created_at, updated_at
     </sql>
 

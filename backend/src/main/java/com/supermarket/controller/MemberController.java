@@ -179,76 +179,103 @@ public class MemberController {
         try {
             System.out.println("📱 根据手机号查询会员: " + phone);
             
-            Member member = memberService.getMemberByPhone(phone);
+            // 手机号格式验证
+            if (phone == null || phone.trim().isEmpty()) {
+                return Result.error("手机号不能为空");
+            }
+            
+            if (!phone.matches("^1[3-9]\\d{9}$")) {
+                return Result.error("手机号格式不正确");
+            }
+            
+            QueryWrapper<Member> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("phone", phone.trim());
+            queryWrapper.eq("status", "active");
+            
+            Member member = memberService.getOne(queryWrapper);
             
             if (member != null) {
-                System.out.println("✅ 找到会员: " + member.getMemberName());
+                System.out.println("✅ 找到会员: " + member.getMemberName() + 
+                    ", 等级: " + member.getMemberLevel() + 
+                    ", 积分: " + member.getPoints());
                 return Result.success("查询成功", member);
             } else {
+                System.out.println("❌ 未找到手机号对应的会员: " + phone);
                 return Result.error("未找到该手机号对应的会员");
             }
         } catch (Exception e) {
+            System.err.println("❌ 查询会员失败: " + e.getMessage());
             e.printStackTrace();
             return Result.error("查询失败: " + e.getMessage());
         }
     }
 
     /**
-     * 会员积分操作（增加或扣减）
+     * 计算会员折扣
      */
-    @PostMapping("/{id}/points/operation")
-    public Result<Member> pointsOperation(
-            @PathVariable Long id, 
-            @RequestBody Map<String, Object> request) {
+    @PostMapping("/calculate-discount")
+    public Result<Map<String, Object>> calculateDiscount(@RequestBody Map<String, Object> request) {
         try {
-            String operation = (String) request.get("operation");
-            Integer points = null;
+            Long memberId = Long.valueOf(request.get("memberId").toString());
+            Double totalAmount = Double.valueOf(request.get("totalAmount").toString());
             
-            // 处理points参数的类型转换
-            Object pointsObj = request.get("points");
-            if (pointsObj instanceof Integer) {
-                points = (Integer) pointsObj;
-            } else if (pointsObj instanceof Double) {
-                points = ((Double) pointsObj).intValue();
-            } else if (pointsObj instanceof String) {
-                points = Integer.parseInt((String) pointsObj);
-            }
+            System.out.println("💰 计算会员折扣 - 会员ID: " + memberId + ", 金额: " + totalAmount);
             
-            String remark = (String) request.get("remark");
-            
-            System.out.println("💎 会员积分操作: " + id + ", 操作: " + operation + ", 积分: " + points);
-            
-            if (points == null || points <= 0) {
-                return Result.error("积分数量必须大于0");
-            }
-            
-            Member member = memberService.getById(id);
+            Member member = memberService.getById(memberId);
             if (member == null) {
                 return Result.error("会员不存在");
             }
             
-            Integer currentPoints = member.getPoints() != null ? member.getPoints() : 0;
-            Integer newPoints;
+            // 计算折扣率
+            double discountRate = 0.0;
+            String memberLevelName = "";
             
-            if ("add".equals(operation)) {
-                newPoints = currentPoints + points;
-            } else if ("subtract".equals(operation)) {
-                newPoints = Math.max(0, currentPoints - points); // 积分不能为负
-            } else {
-                return Result.error("无效的操作类型，只支持add或subtract");
+            switch (member.getMemberLevel()) {
+                case "diamond":
+                    discountRate = 0.15;
+                    memberLevelName = "钻石会员";
+                    break;
+                case "gold":
+                    discountRate = 0.10;
+                    memberLevelName = "金卡会员";
+                    break;
+                case "silver":
+                    discountRate = 0.05;
+                    memberLevelName = "银卡会员";
+                    break;
+                case "bronze":
+                default:
+                    discountRate = 0.0;
+                    memberLevelName = "普通会员";
+                    break;
             }
             
-            boolean success = memberService.updateMemberPoints(id, newPoints);
-            if (success) {
-                Member updatedMember = memberService.getById(id);
-                System.out.println("✅ 积分操作成功，当前积分: " + newPoints);
-                return Result.success("积分操作成功", updatedMember);
-            } else {
-                return Result.error("积分操作失败");
-            }
+            // 计算折扣
+            double discountAmount = totalAmount * discountRate;
+            double finalAmount = totalAmount - discountAmount;
+            
+            Map<String, Object> discountInfo = new HashMap<>();
+            discountInfo.put("memberId", memberId);
+            discountInfo.put("memberName", member.getMemberName());
+            discountInfo.put("memberLevel", member.getMemberLevel());
+            discountInfo.put("memberLevelName", memberLevelName);
+            discountInfo.put("discountRate", discountRate);
+            discountInfo.put("discountPercentage", discountRate * 100);
+            discountInfo.put("totalAmount", totalAmount);
+            discountInfo.put("discountAmount", discountAmount);
+            discountInfo.put("finalAmount", finalAmount);
+            discountInfo.put("savedAmount", discountAmount);
+            
+            System.out.println("✅ 折扣计算完成 - 原价: " + totalAmount + 
+                ", 折扣: " + (discountRate * 100) + "%" +
+                ", 优惠: " + discountAmount + 
+                ", 实付: " + finalAmount);
+            
+            return Result.success("计算成功", discountInfo);
         } catch (Exception e) {
+            System.err.println("❌ 计算折扣失败: " + e.getMessage());
             e.printStackTrace();
-            return Result.error("积分操作失败: " + e.getMessage());
+            return Result.error("计算失败: " + e.getMessage());
         }
     }
 

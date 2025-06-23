@@ -1,10 +1,11 @@
 package com.supermarket.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.supermarket.common.Result;
 import com.supermarket.entity.Category;
 import com.supermarket.service.CategoryService;
+import com.supermarket.common.Result;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,56 +14,74 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/categories")
-@CrossOrigin(origins = "http://localhost:3000") // 允许前端跨域访问
+@CrossOrigin(origins = "*")
 public class CategoryController {
-    
+
     @Autowired
     private CategoryService categoryService;
-    
-    @GetMapping("/page")
-    public Result<Page<Category>> getPage(@RequestParam(defaultValue = "1") Integer current,
-                                         @RequestParam(defaultValue = "10") Integer size,
-                                         @RequestParam(required = false) String categoryName) {
+
+    /**
+     * 获取所有分类列表
+     */
+    @GetMapping("/list")
+    public Result<List<Category>> getList() {
         try {
+            System.out.println("📂 获取所有分类列表");
+            
+            QueryWrapper<Category> queryWrapper = new QueryWrapper<>();
+            queryWrapper.eq("status", "active");
+            queryWrapper.orderBy(true, true, "category_id");
+            
+            List<Category> categories = categoryService.list(queryWrapper);
+            
+            System.out.println("✅ 获取分类列表成功，共" + categories.size() + "个分类");
+            return Result.success("获取成功", categories);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Result.error("获取分类列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 分页查询分类
+     */
+    @GetMapping("/page")
+    public Result<IPage<Category>> getPage(
+            @RequestParam(defaultValue = "1") Long current,
+            @RequestParam(defaultValue = "10") Long size,
+            @RequestParam(required = false) String categoryName) {
+        try {
+            System.out.println("📂 分页查询分类 - 页码:" + current + ", 大小:" + size);
+            
             Page<Category> page = new Page<>(current, size);
             QueryWrapper<Category> queryWrapper = new QueryWrapper<>();
             
             if (categoryName != null && !categoryName.trim().isEmpty()) {
-                queryWrapper.like("category_name", categoryName);
+                queryWrapper.like("category_name", categoryName.trim());
             }
-            // 移除status过滤，显示所有分类
+            
+            queryWrapper.eq("status", "active");
             queryWrapper.orderByDesc("created_at");
             
-            Page<Category> result = categoryService.page(page, queryWrapper);
-            System.out.println("查询分类数据: " + result.getRecords().size() + " 条");
+            IPage<Category> categoryPage = categoryService.page(page, queryWrapper);
             
-            return Result.success(result);
+            System.out.println("✅ 查询成功，共" + categoryPage.getTotal() + "条记录");
+            return Result.success(categoryPage);
+            
         } catch (Exception e) {
             e.printStackTrace();
             return Result.error("查询失败: " + e.getMessage());
         }
     }
-    
-    @GetMapping("/list")
-    public Result<List<Category>> getList() {
-        try {
-            QueryWrapper<Category> queryWrapper = new QueryWrapper<>();
-            queryWrapper.eq("status", "active");
-            queryWrapper.orderBy(true, true, "category_name");
-            List<Category> result = categoryService.list(queryWrapper);
-            
-            System.out.println("查询所有分类: " + result.size() + " 条");
-            return Result.success(result);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return Result.error("查询失败: " + e.getMessage());
-        }
-    }
-    
+
+    /**
+     * 创建分类
+     */
     @PostMapping
     public Result<Category> create(@RequestBody Category category) {
         try {
-            System.out.println("创建分类: " + category.getCategoryName());
+            System.out.println("➕ 创建分类: " + category.getCategoryName());
             
             category.setStatus("active");
             category.setCreatedAt(LocalDateTime.now());
@@ -70,8 +89,8 @@ public class CategoryController {
             
             boolean success = categoryService.save(category);
             if (success) {
-                System.out.println("分类创建成功，ID: " + category.getCategoryId());
-                return Result.success(category);
+                System.out.println("✅ 分类创建成功");
+                return Result.success("创建成功", category);
             } else {
                 return Result.error("创建失败");
             }
@@ -80,19 +99,22 @@ public class CategoryController {
             return Result.error("创建失败: " + e.getMessage());
         }
     }
-    
+
+    /**
+     * 更新分类
+     */
     @PutMapping("/{id}")
     public Result<Category> update(@PathVariable Long id, @RequestBody Category category) {
         try {
-            System.out.println("更新分类ID: " + id + ", 名称: " + category.getCategoryName());
+            System.out.println("📝 更新分类: " + id);
             
             category.setCategoryId(id);
             category.setUpdatedAt(LocalDateTime.now());
             
             boolean success = categoryService.updateById(category);
             if (success) {
-                System.out.println("分类更新成功");
-                return Result.success(category);
+                System.out.println("✅ 分类更新成功");
+                return Result.success("更新成功", category);
             } else {
                 return Result.error("更新失败");
             }
@@ -101,24 +123,21 @@ public class CategoryController {
             return Result.error("更新失败: " + e.getMessage());
         }
     }
-    
+
+    /**
+     * 删除分类
+     */
     @DeleteMapping("/{id}")
-    public Result delete(@PathVariable Long id) {
+    public Result<Void> delete(@PathVariable Long id) {
         try {
-            System.out.println("💥 物理删除分类ID: " + id);
+            System.out.println("🗑️ 删除分类: " + id);
             
-            // 检查是否有商品使用此分类
-            QueryWrapper<Category> checkQuery = new QueryWrapper<>();
-            checkQuery.eq("category_id", id);
-            // 这里可以添加检查逻辑，暂时直接删除
-            
-            // 真正的物理删除 - 直接从数据库中删除记录
             boolean success = categoryService.removeById(id);
             if (success) {
-                System.out.println("✅ 分类物理删除成功，数据已从数据库中彻底移除");
+                System.out.println("✅ 分类删除成功");
                 return Result.success("删除成功");
             } else {
-                return Result.error("删除失败，分类不存在");
+                return Result.error("删除失败");
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -212,16 +212,7 @@
             </div>
             <div class="amount-row">
               <span class="amount-label">优惠金额：</span>
-              <el-input-number
-                v-model="discountAmount"
-                :min="0"
-                :max="totalAmount"
-                :step="0.01"
-                :precision="2"
-                size="small"
-                @change="calculateFinalAmount"
-                style="width: 120px;"
-              />
+              <span class="amount-value discount-value">-¥{{ discountAmount.toFixed(2) }}</span>
             </div>
             <div class="amount-row final-row">
               <span class="amount-label">应收金额：</span>
@@ -240,23 +231,61 @@
                 @keyup.enter="searchMember"
                 clearable
                 size="small"
+                maxlength="11"
               >
                 <template #prepend>📱</template>
                 <template #append>
-                  <el-button @click="searchMember" size="small">查找</el-button>
+                  <el-button @click="searchMember" size="small" type="primary">查找</el-button>
                 </template>
               </el-input>
             </div>
+            
+            <!-- 会员信息卡片 -->
             <div v-if="selectedMember" class="member-card">
-              <div class="member-info">
+              <div class="member-header">
                 <div class="member-name">{{ selectedMember.memberName }}</div>
-                <div class="member-details">
+                <el-button @click="clearMemberInfo" size="small" type="text" class="clear-member">
+                  <el-icon><Close /></el-icon>
+                </el-button>
+              </div>
+              <div class="member-details">
+                <div class="member-level">
                   <el-tag :type="getMemberLevelColor(selectedMember.memberLevel)" size="small">
-                    {{ getMemberLevelText(selectedMember.memberLevel) }}
+                    {{ selectedMember.memberLevelName }}
                   </el-tag>
+                  <span class="member-phone">{{ selectedMember.phone }}</span>
+                </div>
+                <div class="member-benefits">
                   <span class="member-points">积分: {{ selectedMember.points }}</span>
+                  <span v-if="selectedMember.discountRate > 0" class="discount-info">
+                    享受{{ (selectedMember.discountRate * 100) }}%折扣
+                  </span>
                 </div>
               </div>
+              
+              <!-- 会员折扣详情 -->
+              <div v-if="memberDiscountInfo && discountAmount > 0" class="member-discount">
+                <div class="discount-header">💰 会员优惠详情</div>
+                <div class="discount-details">
+                  <div class="discount-row">
+                    <span>商品总额：</span>
+                    <span>¥{{ totalAmount.toFixed(2) }}</span>
+                  </div>
+                  <div class="discount-row highlight">
+                    <span>会员优惠：</span>
+                    <span>-¥{{ discountAmount.toFixed(2) }}</span>
+                  </div>
+                  <div class="discount-row">
+                    <span>节省金额：</span>
+                    <span class="saved-amount">¥{{ discountAmount.toFixed(2) }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 无会员提示 -->
+            <div v-else class="no-member-tip">
+              <span>💡 输入会员手机号享受折扣优惠</span>
             </div>
           </div>
 
@@ -269,28 +298,6 @@
               <el-radio-button label="alipay">📱 支付宝</el-radio-button>
               <el-radio-button label="wechat">💚 微信</el-radio-button>
             </el-radio-group>
-          </div>
-
-          <!-- 找零信息（现金支付时显示） -->
-          <div v-if="paymentMethod === 'cash'" class="change-section">
-            <div class="received-input">
-              <span class="amount-label">实收金额：</span>
-              <el-input-number
-                v-model="receivedAmount"
-                :min="finalAmount"
-                :step="0.01"
-                :precision="2"
-                @change="calculateChange"
-                size="small"
-                style="width: 120px;"
-              />
-            </div>
-            <div class="change-display">
-              <span class="amount-label">找零金额：</span>
-              <span class="change-amount" :class="{ 'highlight': changeAmount > 0 }">
-                ¥{{ changeAmount.toFixed(2) }}
-              </span>
-            </div>
           </div>
 
           <!-- 操作按钮 -->
@@ -325,9 +332,6 @@
           <p><span>订单号：</span><span>{{ currentOrder.orderNumber }}</span></p>
           <p><span>支付金额：</span><span>¥{{ currentOrder.finalAmount }}</span></p>
           <p><span>支付方式：</span><span>{{ getPaymentMethodText(currentOrder.paymentMethod) }}</span></p>
-          <p v-if="currentOrder.paymentMethod === 'cash' && changeAmount > 0">
-            <span>找零：</span><span class="change-highlight">¥{{ changeAmount.toFixed(2) }}</span>
-          </p>
         </div>
       </div>
       <template #footer>
@@ -341,14 +345,25 @@
 <script setup lang="ts">
 import { ref, computed, reactive, onMounted, nextTick, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Delete, Plus, Minus, Refresh } from '@element-plus/icons-vue'
+import { Search, Delete, Plus, Minus, Refresh, Close } from '@element-plus/icons-vue'
 import { productApi } from '../api/product'
+import { memberApi } from '../api/member'
+import { saleApi } from '../api/sale'
 
 // 响应式数据
 const barcodeInput = ref('')
 const barcodeInputRef = ref()
 const productSearchKeyword = ref('')
 const searchSuggestions = ref([])
+
+// 商品数据
+const allProducts = ref([])
+const filteredProducts = ref([])
+const productPagination = reactive({
+  current: 1,
+  size: 12,
+  total: 0
+})
 
 // 购物车商品列表
 interface CartItem {
@@ -363,28 +378,30 @@ interface CartItem {
 
 const cartItems = ref<CartItem[]>([])
 const discountAmount = ref(0)
-const memberPhone = ref('')
+
+// 支付相关 - 移除找零相关变量
+const paymentMethod = ref('cash')
+const showPaymentSuccess = ref(false)
+const currentOrder = ref({
+  orderNumber: '',
+  finalAmount: 0,
+  paymentMethod: ''
+})
+
+// 会员相关数据
 interface Member {
   memberId: number
   memberName: string
-  phoneNumber: string
+  phone: string
   memberLevel: string
   points: number
+  discountRate?: number
+  memberLevelName?: string
 }
-const selectedMember = ref<Member | null>(null)
-const paymentMethod = ref('cash')
-const receivedAmount = ref(0)
-const showPaymentSuccess = ref(false)
-const currentOrder = ref<{ orderNumber?: string; finalAmount?: number; paymentMethod?: string }>({})
 
-// 新增商品相关数据
-const allProducts = ref([])
-const filteredProducts = ref([])
-const productPagination = reactive({
-  current: 1,
-  size: 12,
-  total: 0
-})
+const memberPhone = ref('')
+const selectedMember = ref<Member | null>(null)
+const memberDiscountInfo = ref<any>(null)
 
 // 计算属性
 const totalAmount = computed(() => {
@@ -395,228 +412,7 @@ const finalAmount = computed(() => {
   return Math.max(0, totalAmount.value - discountAmount.value)
 })
 
-const changeAmount = computed(() => {
-  return Math.max(0, receivedAmount.value - finalAmount.value)
-})
-
-// 方法
-const addProduct = () => {
-  if (!barcodeInput.value.trim()) return
-
-  const product = allProducts.value.find(p => p.barcode === barcodeInput.value.trim())
-  
-  if (!product) {
-    ElMessage.error('未找到该商品，请检查条码是否正确')
-    return
-  }
-
-  // 检查购物车中是否已有该商品
-  const existingItem = cartItems.value.find(item => item.barcode === product.barcode)
-  
-  if (existingItem) {
-    if (existingItem.quantity < product.stockQuantity) {
-      existingItem.quantity++
-      existingItem.subtotal = existingItem.price * existingItem.quantity
-    } else {
-      ElMessage.warning('商品库存不足')
-    }
-  } else {
-    cartItems.value.push({
-      ...product,
-      quantity: 1,
-      subtotal: product.price
-    })
-  }
-
-  barcodeInput.value = ''
-  calculateFinalAmount()
-  
-  // 重新聚焦到输入框
-  nextTick(() => {
-    barcodeInputRef.value?.focus()
-  })
-}
-
-interface QuickProduct {
-  productId: number
-  productName: string
-  price: number
-  barcode: string
-}
-
-const addQuickProduct = (product: QuickProduct) => {
-  const cartItem = {
-    ...product,
-    quantity: 1,
-    subtotal: product.price,
-    stockQuantity: 999 // 快捷商品通常库存充足
-  }
-  
-  cartItems.value.push(cartItem)
-  calculateFinalAmount()
-}
-
-const updateItemTotal = (index: number) => {
-  const item = cartItems.value[index]
-  item.subtotal = item.price * item.quantity
-  calculateFinalAmount()
-}
-
-const removeItem = (index) => {
-  cartItems.value.splice(index, 1)
-  calculateFinalAmount()
-}
-
-const calculateFinalAmount = () => {
-  receivedAmount.value = finalAmount.value
-}
-
-const calculateChange = () => {
-  // 找零计算已在计算属性中处理
-}
-
-const searchMember = () => {
-  if (!memberPhone.value) {
-    selectedMember.value = null
-    return
-  }
-
-  // 模拟会员查询
-  const mockMembers = [
-    {
-      memberId: 1001,
-      memberName: '张三',
-      phoneNumber: '13812345678',
-      memberLevel: 'gold',
-      points: 2580
-    }
-  ]
-
-  const member = mockMembers.find(m => m.phoneNumber === memberPhone.value)
-  
-  if (member) {
-    selectedMember.value = member
-    ElMessage.success(`会员 ${member.memberName} 信息加载成功`)
-  } else {
-    selectedMember.value = null
-    ElMessage.warning('未找到该会员信息')
-  }
-}
-
-const processPayment = async () => {
-  if (cartItems.value.length === 0) {
-    ElMessage.error('购物车为空，无法结算')
-    return
-  }
-
-  if (paymentMethod.value === 'cash' && receivedAmount.value < finalAmount.value) {
-    ElMessage.error('实收金额不足')
-    return
-  }
-
-  try {
-    // 构建结算数据
-    const checkoutData = {
-      items: cartItems.value.map(item => ({
-        productId: item.productId,
-        productName: item.productName,
-        barcode: item.barcode,
-        price: Number(item.price),
-        quantity: Number(item.quantity),
-        subtotal: Number(item.subtotal)
-      })),
-      totalAmount: Number(totalAmount.value),
-      discountAmount: Number(discountAmount.value),
-      finalAmount: Number(finalAmount.value),
-      paymentMethod: paymentMethod.value,
-      memberId: selectedMember.value?.memberId || null,
-      cashierId: 1 // 假设当前收银员ID为1
-    }
-
-    console.log('结算数据:', checkoutData)
-
-    // 模拟API调用
-    const response = await mockCheckout(checkoutData)
-    
-    if (response.success) {
-      currentOrder.value = {
-        orderNumber: response.orderNumber,
-        finalAmount: finalAmount.value,
-        paymentMethod: paymentMethod.value
-      }
-      
-      showPaymentSuccess.value = true
-      ElMessage.success('支付成功！')
-    } else {
-      ElMessage.error('支付失败：' + response.message)
-    }
-  } catch (error) {
-    console.error('支付错误:', error)
-    ElMessage.error('支付失败，请重试')
-  }
-}
-
-const mockCheckout = (data) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve({
-        success: true,
-        orderNumber: 'ORD' + Date.now(),
-        message: '支付成功'
-      })
-    }, 1000)
-  })
-}
-
-const clearCart = () => {
-  ElMessageBox.confirm('确定要清空购物车吗？', '确认操作', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    cartItems.value = []
-    discountAmount.value = 0
-    selectedMember.value = null
-    memberPhone.value = ''
-    receivedAmount.value = 0
-    ElMessage.success('购物车已清空')
-  }).catch(() => {
-    // 取消操作
-  })
-}
-
-const printReceipt = () => {
-  ElMessage.info('小票打印功能开发中...')
-}
-
-const nextOrder = () => {
-  showPaymentSuccess.value = false
-  clearCart()
-  
-  // 重新聚焦到条码输入框
-  nextTick(() => {
-    barcodeInputRef.value?.focus()
-  })
-}
-
-const handleSearchInput = async () => {
-  if (barcodeInput.value.length >= 2) {
-    // 搜索商品建议
-    searchSuggestions.value = allProducts.value.filter(product => 
-      product.productName.toLowerCase().includes(barcodeInput.value.toLowerCase()) ||
-      product.barcode.includes(barcodeInput.value)
-    ).slice(0, 5)
-  } else {
-    searchSuggestions.value = []
-  }
-}
-
-const selectSuggestion = (product) => {
-  barcodeInput.value = product.barcode
-  searchSuggestions.value = []
-  addProduct()
-}
-
+// 加载商品数据
 const loadProducts = async () => {
   try {
     console.log('🔍 加载商品数据...')
@@ -672,6 +468,176 @@ const loadProducts = async () => {
     productPagination.total = allProducts.value.length
     filterProducts()
   }
+}
+
+// 方法
+const addProduct = () => {
+  if (!barcodeInput.value.trim()) return
+
+  const product = allProducts.value.find(p => p.barcode === barcodeInput.value.trim())
+  
+  if (!product) {
+    ElMessage.error('未找到该商品，请检查条码是否正确')
+    return
+  }
+
+  const existingItem = cartItems.value.find(item => item.barcode === product.barcode)
+  
+  if (existingItem) {
+    if (existingItem.quantity < product.stockQuantity) {
+      existingItem.quantity++
+      existingItem.subtotal = existingItem.price * existingItem.quantity
+    } else {
+      ElMessage.warning('商品库存不足')
+    }
+  } else {
+    cartItems.value.push({
+      ...product,
+      quantity: 1,
+      subtotal: product.price
+    })
+  }
+
+  barcodeInput.value = ''
+  calculateFinalAmount()
+  
+  nextTick(() => {
+    barcodeInputRef.value?.focus()
+  })
+}
+
+const removeItem = (index) => {
+  cartItems.value.splice(index, 1)
+  calculateFinalAmount()
+}
+
+const processPayment = async () => {
+  if (cartItems.value.length === 0) {
+    ElMessage.error('购物车为空，无法结算')
+    return
+  }
+
+  try {
+    console.log('🛒 开始处理支付...')
+    
+    const checkoutData = {
+      items: cartItems.value.map(item => ({
+        productId: item.productId,
+        productName: item.productName,
+        barcode: item.barcode,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+        subtotal: Number(item.subtotal)
+      })),
+      totalAmount: Number(totalAmount.value),
+      discountAmount: Number(discountAmount.value),
+      finalAmount: Number(finalAmount.value),
+      paymentMethod: paymentMethod.value,
+      memberId: selectedMember.value?.memberId || null,
+      cashierId: 1
+    }
+
+    console.log('📤 发送结算数据:', checkoutData)
+
+    const response = await saleApi.checkout(checkoutData)
+    console.log('📥 收到结算响应:', response)
+    
+    if (response && response.success) {
+      currentOrder.value = {
+        orderNumber: response.data.saleNumber,
+        finalAmount: finalAmount.value,
+        paymentMethod: paymentMethod.value
+      }
+      
+      showPaymentSuccess.value = true
+      ElMessage.success('支付成功！订单已保存')
+      
+      console.log('🎉 支付完成，订单号:', response.data.saleNumber)
+    } else {
+      throw new Error(response?.message || '结算失败')
+    }
+  } catch (error: any) {
+    console.error('❌ 支付失败:', error)
+    
+    if (error.response?.status === 500) {
+      ElMessage.error('服务器错误，支付失败，请重试')
+    } else if (error.response?.status === 404) {
+      ElMessage.error('结算接口不存在，请检查后端服务')
+    } else {
+      console.log('⚠️ 后端API失败，使用模拟结算')
+      const mockResponse = await mockCheckout(checkoutData)
+      
+      if (mockResponse.success) {
+        currentOrder.value = {
+          orderNumber: mockResponse.orderNumber,
+          finalAmount: finalAmount.value,
+          paymentMethod: paymentMethod.value
+        }
+        
+        showPaymentSuccess.value = true
+        ElMessage.warning('支付成功！(模拟模式，数据未保存到数据库)')
+      }
+    }
+  }
+}
+
+// 模拟结算接口
+const mockCheckout = (data) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        success: true,
+        orderNumber: 'ORD' + Date.now(),
+        message: '支付成功'
+      })
+    }, 1000)
+  })
+}
+
+const clearCart = () => {
+  ElMessageBox.confirm('确定要清空购物车吗？', '确认操作', {
+    confirmButtonText: '确定',
+    cancelButtonText: '取消',
+    type: 'warning'
+  }).then(() => {
+    cartItems.value = []
+    discountAmount.value = 0
+    clearMemberInfo()
+    ElMessage.success('购物车已清空')
+  }).catch(() => {
+    // 取消操作
+  })
+}
+
+const printReceipt = () => {
+  ElMessage.info('小票打印功能开发中...')
+}
+
+const nextOrder = () => {
+  showPaymentSuccess.value = false
+  clearCart()
+  clearMemberInfo()
+  
+  nextTick(() => {
+    barcodeInputRef.value?.focus()
+  })
+}
+
+const handleSearchInput = async () => {
+  if (barcodeInput.value.length >= 2) {
+    searchSuggestions.value = allProducts.value.filter(product => 
+      product.productName.toLowerCase().includes(barcodeInput.value.toLowerCase()) ||
+      product.barcode.includes(barcodeInput.value)
+    ).slice(0, 5)
+  } else {
+    searchSuggestions.value = []
+  }
+}
+
+const selectSuggestion = (product) => {
+  barcodeInput.value = product.barcode
+  searchSuggestions.value = []
+  addProduct()
 }
 
 const filterProducts = () => {
@@ -744,6 +710,130 @@ const getStockStatus = (stock) => {
   return 'success'
 }
 
+// 会员查找功能
+const searchMember = async () => {
+  if (!memberPhone.value || memberPhone.value.trim().length < 11) {
+    selectedMember.value = null
+    memberDiscountInfo.value = null
+    ElMessage.warning('请输入正确的11位手机号')
+    return
+  }
+
+  try {
+    console.log('📱 开始查找会员:', memberPhone.value)
+    
+    const response = await memberApi.getByPhone(memberPhone.value.trim())
+    console.log('📱 会员查询响应:', response)
+    
+    if (response && response.success && response.data) {
+      const member = response.data
+      selectedMember.value = {
+        memberId: member.memberId,
+        memberName: member.memberName,
+        phone: member.phone,
+        memberLevel: member.memberLevel,
+        points: member.points,
+        discountRate: getDiscountRateByLevel(member.memberLevel),
+        memberLevelName: getMemberLevelText(member.memberLevel)
+      }
+      
+      ElMessage.success(`会员 ${member.memberName} 查找成功！`)
+      
+      await calculateMemberDiscount()
+      
+    } else {
+      selectedMember.value = null
+      memberDiscountInfo.value = null
+      ElMessage.warning('未找到该手机号对应的会员，请检查手机号是否正确')
+    }
+  } catch (error: any) {
+    console.error('❌ 会员查询失败:', error)
+    selectedMember.value = null
+    memberDiscountInfo.value = null
+    
+    if (error.response) {
+      const status = error.response.status
+      if (status === 404) {
+        ElMessage.error('未找到该手机号对应的会员')
+      } else if (status === 500) {
+        ElMessage.error('服务器错误，请稍后重试')
+      } else {
+        ElMessage.error(`查询失败 (${status}): 请检查网络连接`)
+      }
+    } else {
+      ElMessage.error('网络连接失败，请检查后端服务是否启动')
+    }
+  }
+}
+
+// 根据会员等级获取折扣率
+const getDiscountRateByLevel = (level: string): number => {
+  const discountRates: Record<string, number> = {
+    'diamond': 0.15,
+    'gold': 0.10,
+    'silver': 0.05,
+    'bronze': 0.0
+  }
+  return discountRates[level] || 0.0
+}
+
+// 计算会员折扣
+const calculateMemberDiscount = async () => {
+  if (!selectedMember.value || totalAmount.value <= 0) {
+    discountAmount.value = 0
+    return
+  }
+
+  try {
+    console.log('💰 开始计算会员折扣...')
+    
+    const response = await memberApi.calculateDiscount(
+      selectedMember.value.memberId,
+      totalAmount.value
+    )
+    
+    if (response && response.success && response.data) {
+      discountAmount.value = response.data.discountAmount || 0
+      
+      ElMessage.success(
+        `${selectedMember.value.memberLevelName}享受${(response.data.discountPercentage || 0)}%折扣，优惠¥${discountAmount.value.toFixed(2)}`
+      )
+      
+      console.log('✅ 会员折扣计算完成，优惠金额:', discountAmount.value)
+    } else {
+      throw new Error('后端折扣计算失败')
+    }
+  } catch (error: any) {
+    console.error('❌ 后端折扣计算失败，使用前端计算:', error)
+    
+    const discountRate = selectedMember.value.discountRate || 0
+    const calculatedDiscount = totalAmount.value * discountRate
+    
+    discountAmount.value = calculatedDiscount
+    
+    if (discountRate > 0) {
+      ElMessage.success(
+        `${selectedMember.value.memberLevelName}享受${(discountRate * 100)}%折扣，优惠¥${discountAmount.value.toFixed(2)}`
+      )
+    }
+  }
+}
+
+const calculateFinalAmount = () => {
+  if (selectedMember.value) {
+    calculateMemberDiscount()
+  }
+}
+
+// 清空会员信息时重置优惠
+const clearMemberInfo = () => {
+  selectedMember.value = null
+  memberDiscountInfo.value = null
+  memberPhone.value = ''
+  discountAmount.value = 0
+}
+
+// 工具方法
 const getMemberLevelColor = (level: string) => {
   const types: Record<string, string> = {
     'bronze': '',
@@ -776,15 +866,22 @@ const getPaymentMethodText = (method: string) => {
 
 // 生命周期
 onMounted(() => {
+  console.log('🎉 收银台页面已加载')
   loadProducts()
   nextTick(() => {
     barcodeInputRef.value?.focus()
   })
 })
 
-// 监听搜索关键词变化
+// 监听
 watch(productSearchKeyword, () => {
   filterProducts()
+})
+
+watch(totalAmount, () => {
+  if (selectedMember.value) {
+    calculateMemberDiscount()
+  }
 })
 </script>
 
@@ -1170,19 +1267,49 @@ watch(productSearchKeyword, () => {
 }
 
 .member-card {
-  background: #e8f5e8;
-  padding: 10px;
-  border-radius: 6px;
+  background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
+  padding: 15px;
+  border-radius: 10px;
   margin-top: 10px;
+  border: 1px solid #d4edda;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
+}
+
+.member-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .member-name {
   font-weight: bold;
   color: #2c3e50;
-  margin-bottom: 5px;
+  font-size: 1.1rem;
+}
+
+.clear-member {
+  color: #666;
+  padding: 0;
 }
 
 .member-details {
+  margin-bottom: 10px;
+}
+
+.member-level {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.member-phone {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.member-benefits {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -1190,41 +1317,78 @@ watch(productSearchKeyword, () => {
 }
 
 .member-points {
+  color: #e67e22;
+  font-weight: 500;
+}
+
+.discount-info {
+  color: #27ae60;
+  font-weight: bold;
+  background: rgba(39, 174, 96, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.member-discount {
+  margin-top: 12px;
+  padding: 10px;
+  background: rgba(39, 174, 96, 0.1);
+  border-radius: 6px;
+  border-left: 3px solid #27ae60;
+}
+
+.discount-header {
+  font-weight: bold;
+  color: #27ae60;
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.discount-details {
+  font-size: 0.85rem;
+}
+
+.discount-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.discount-row.highlight {
+  color: #27ae60;
+  font-weight: bold;
+}
+
+.saved-amount {
+  color: #e67e22;
+  font-weight: bold;
+}
+
+.no-member-tip {
+  margin-top: 10px;
+  padding: 8px 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
   color: #666;
+  font-size: 0.85rem;
+  text-align: center;
+  border: 1px dashed #dee2e6;
+}
+
+.member-discount-row {
+  color: #27ae60;
+  font-weight: 500;
+}
+
+.discount-value {
+  color: #27ae60;
+  font-weight: bold;
 }
 
 .payment-options {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-}
-
-.change-section {
-  background: #fff3cd;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-}
-
-.received-input, .change-display {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.change-display {
-  margin-bottom: 0;
-}
-
-.change-amount {
-  font-weight: bold;
-  color: #e67e22;
-}
-
-.change-amount.highlight {
-  color: #27ae60;
-  font-size: 1.1rem;
 }
 
 .action-buttons {

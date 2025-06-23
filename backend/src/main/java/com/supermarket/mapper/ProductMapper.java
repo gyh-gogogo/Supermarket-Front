@@ -35,9 +35,9 @@ public interface ProductMapper extends BaseMapper<Product> {
     /**
      * 插入商品
      */
-    @Insert("INSERT INTO products (product_name, barcode, price, cost_price, stock_quantity, " +
+    @Insert("INSERT INTO products (product_name, category_id,barcode, price, cost_price, stock_quantity, " +
             "min_stock_level, description, status, created_at, updated_at) VALUES " +
-            "(#{productName}, #{barcode}, #{price}, #{costPrice}, #{stockQuantity}, " +
+            "(#{productName}, #{categoryId},#{barcode}, #{price}, #{costPrice}, #{stockQuantity}, " +
             "#{minStockLevel}, #{description}, #{status}, #{createdAt}, #{updatedAt})")
     @Options(useGeneratedKeys = true, keyProperty = "productId")
     int insert(Product product);

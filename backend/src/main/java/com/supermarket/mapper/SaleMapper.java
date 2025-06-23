@@ -2,10 +2,12 @@ package com.supermarket.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.supermarket.entity.Sale;
-import org.apache.ibatis.annotations.*;
+import org.apache.ibatis.annotations.Mapper;
+import org.apache.ibatis.annotations.Select;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -66,6 +68,15 @@ public interface SaleMapper extends BaseMapper<Sale> {
      * 获取收银员今日销售额
      */
     BigDecimal getTodaySalesByCashier(Long cashierId);
+
+
+    @Select("select sum(final_amount) from sales where sales.sale_date >= #{beginTime} and sales.sale_date <= #{endTime}")
+    int getTodaySalesAmount(LocalDateTime beginTime, LocalDateTime endTime);
+
+
+    @Select("select count(*) from sales where sales.sale_date >= #{beginTime} and sales.sale_date <= #{endTime}")
+    int getTodayOrders(LocalDateTime beginTime, LocalDateTime endTime);
+
 
     /**
      * 获取收银员今日订单数

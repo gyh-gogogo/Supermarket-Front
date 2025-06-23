@@ -1,5 +1,6 @@
 package com.supermarket.service;
 
+import com.baomidou.mybatisplus.extension.service.IService;
 import com.supermarket.entity.Sale;
 import com.supermarket.entity.SaleItem;
 
@@ -9,7 +10,7 @@ import java.util.Map;
 /**
  * 销售记录服务接口
  */
-public interface SaleService {
+public interface SaleService extends IService<Sale> {
 
     /**
      * 获取销售记录列表
@@ -65,4 +66,11 @@ public interface SaleService {
      * 获取销售报表数据
      */
     Map<String, Object> getSalesReport(String startDate, String endDate, String groupBy);
+
+    /**
+     * 处理收银台结算
+     * @param checkoutData 结算数据
+     * @return 处理结果
+     */
+    Map<String, Object> processCheckout(Map<String, Object> checkoutData);
 }

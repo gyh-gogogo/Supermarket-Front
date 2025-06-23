@@ -9,22 +9,22 @@
       </div>
       <div class="system-status">
         <div class="status-item">
-          <span class="status-dot online"></span>
-          <span>系统运行正常</span>
+          <span class="status-dot" :class="{ 'online': isOnline, 'offline': !isOnline }"></span>
+          <span>{{ isOnline ? '系统运行正常' : '系统离线' }}</span>
         </div>
       </div>
     </div>
 
     <!-- 统计卡片区域 -->
-    <div class="stats-grid">
+    <div class="stats-grid" v-loading="statsLoading">
       <div class="stat-card sales-card">
         <div class="card-icon">💰</div>
         <div class="card-content">
           <h3>今日销售额</h3>
-          <div class="stat-value">¥{{ formatNumber(todayStats.sales) }}</div>
-          <div class="stat-change positive">
-            <span>↗</span>
-            +{{ todayStats.salesChange }}%
+          <div class="stat-value">¥{{ formatNumber(todayStats.todaySales) }}</div>
+          <div class="stat-change" :class="{ 'positive': todayStats.salesChange >= 0, 'negative': todayStats.salesChange < 0 }">
+            <span>{{ todayStats.salesChange >= 0 ? '↗' : '↘' }}</span>
+            {{ todayStats.salesChange >= 0 ? '+' : '' }}{{ todayStats.salesChange?.toFixed(1) || 0 }}%
           </div>
         </div>
       </div>
@@ -33,10 +33,10 @@
         <div class="card-icon">📦</div>
         <div class="card-content">
           <h3>今日订单数</h3>
-          <div class="stat-value">{{ todayStats.orders }}</div>
-          <div class="stat-change positive">
-            <span>↗</span>
-            +{{ todayStats.ordersChange }}%
+          <div class="stat-value">{{ todayStats.todayOrders }}</div>
+          <div class="stat-change" :class="{ 'positive': todayStats.ordersChange >= 0, 'negative': todayStats.ordersChange < 0 }">
+            <span>{{ todayStats.ordersChange >= 0 ? '↗' : '↘' }}</span>
+            {{ todayStats.ordersChange >= 0 ? '+' : '' }}{{ todayStats.ordersChange?.toFixed(1) || 0 }}%
           </div>
         </div>
       </div>
@@ -45,7 +45,7 @@
         <div class="card-icon">📋</div>
         <div class="card-content">
           <h3>商品总数</h3>
-          <div class="stat-value">{{ todayStats.products }}</div>
+          <div class="stat-value">{{ systemOverview.totalProducts }}</div>
           <div class="stat-subtitle">种商品在售</div>
         </div>
       </div>
@@ -54,7 +54,7 @@
         <div class="card-icon">👥</div>
         <div class="card-content">
           <h3>会员总数</h3>
-          <div class="stat-value">{{ todayStats.members }}</div>
+          <div class="stat-value">{{ systemOverview.totalMembers }}</div>
           <div class="stat-subtitle">注册会员</div>
         </div>
       </div>
@@ -90,21 +90,47 @@
       </div>
     </div>
 
+    <!-- 低库存警报区域 -->
+    <div class="inventory-alerts" v-if="lowStockProducts.length > 0">
+      <h2>⚠️ 库存警报</h2>
+      <div class="alert-list">
+        <div v-for="product in lowStockProducts" :key="product.productId" class="alert-item">
+          <div class="alert-content">
+            <div class="alert-title">{{ product.productName }}</div>
+            <div class="alert-desc">库存仅剩 {{ product.stockQuantity }} 件</div>
+          </div>
+          <el-tag type="warning" size="small">低库存</el-tag>
+        </div>
+      </div>
+    </div>
+
     <!-- 角色专属信息 -->
     <div class="role-specific-info">
       <div v-if="currentUser?.role === 'admin'" class="admin-panel">
         <h3>🔧 管理员专区</h3>
         <p>您拥有系统所有权限，可以管理用户、商品、会员和查看所有报表。</p>
+        <div class="admin-stats">
+          <span>活跃会员: {{ systemOverview.activeMembers }}</span>
+          <span>低库存商品: {{ systemOverview.lowStockCount }}</span>
+        </div>
       </div>
       
       <div v-if="currentUser?.role === 'manager'" class="manager-panel">
         <h3>📊 管理员专区</h3>
         <p>您可以管理商品信息和查看销售报表。</p>
+        <div class="manager-stats">
+          <span>商品总数: {{ systemOverview.totalProducts }}</span>
+          <span>低库存警报: {{ systemOverview.lowStockCount }}</span>
+        </div>
       </div>
       
       <div v-if="currentUser?.role === 'cashier'" class="cashier-panel">
         <h3>💰 收银员专区</h3>
         <p>欢迎使用收银系统，请点击上方收银台开始工作。</p>
+        <div class="cashier-stats">
+          <span>今日销售: ¥{{ formatNumber(todayStats.todaySales) }}</span>
+          <span>今日订单: {{ todayStats.todayOrders }} 单</span>
+        </div>
       </div>
     </div>
   </div>
@@ -113,6 +139,8 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
+import { dashboardApi, type DashboardStats, type SystemOverview } from '../api/dashboard'
 
 const router = useRouter()
 
@@ -124,15 +152,29 @@ const currentUser = computed(() => {
 
 // 响应式数据
 const currentTime = ref('')
+const statsLoading = ref(false)
+const isOnline = ref(true)
 
-const todayStats = reactive({
-  sales: 12680.50,
-  salesChange: 8.5,
-  orders: 89,
-  ordersChange: 12.3,
-  products: 1256,
-  members: 896
+// 今日统计数据
+const todayStats = reactive<DashboardStats>({
+  todaySales: 0,
+  todayOrders: 0,
+  totalProducts: 0,
+  totalMembers: 0,
+  salesChange: 0,
+  ordersChange: 0
 })
+
+// 系统概览数据
+const systemOverview = reactive<SystemOverview>({
+  totalProducts: 0,
+  totalMembers: 0,
+  activeMembers: 0,
+  lowStockCount: 0
+})
+
+// 低库存商品
+const lowStockProducts = ref([])
 
 // 权限检查方法
 const hasPermission = (permission: string) => {
@@ -143,7 +185,125 @@ const hasAnyPermission = (permissions: string[]) => {
   return permissions.some(permission => hasPermission(permission))
 }
 
-// 方法
+// 加载今日统计数据
+const loadTodayStats = async () => {
+  try {
+    console.log('📊 开始加载今日统计数据...')
+    const response = await dashboardApi.getTodayStats()
+    
+    if (response && response.success) {
+      const data = response.data
+      Object.assign(todayStats, {
+        todaySales: data.todaySales || 0,
+        todayOrders: data.todayOrders || 0,
+        salesChange: data.salesChange || 0,
+        ordersChange: data.ordersChange || 0
+      })
+      
+      console.log('✅ 今日统计数据加载成功:', todayStats)
+      ElMessage.success('数据刷新成功')
+      isOnline.value = true
+    } else {
+      throw new Error(response?.message || '获取今日统计失败')
+    }
+  } catch (error: any) {
+    console.error('❌ 加载今日统计失败:', error)
+    isOnline.value = false
+    
+    // 使用模拟数据
+    Object.assign(todayStats, {
+      todaySales: 12680.50,
+      todayOrders: 89,
+      salesChange: 8.5,
+      ordersChange: 12.3
+    })
+    
+    ElMessage.warning('无法连接到后端服务，显示模拟数据')
+  }
+}
+
+// 加载系统概览数据
+const loadSystemOverview = async () => {
+  try {
+    console.log('📋 开始加载系统概览数据...')
+    const response = await dashboardApi.getSystemOverview()
+    
+    if (response && response.success) {
+      const data = response.data
+      Object.assign(systemOverview, {
+        totalProducts: data.totalProducts || 0,
+        totalMembers: data.totalMembers || 0,
+        activeMembers: data.activeMembers || 0,
+        lowStockCount: data.lowStockCount || 0
+      })
+      
+      console.log('✅ 系统概览数据加载成功:', systemOverview)
+    } else {
+      throw new Error(response?.message || '获取系统概览失败')
+    }
+  } catch (error: any) {
+    console.error('❌ 加载系统概览失败:', error)
+    
+    // 使用模拟数据
+    Object.assign(systemOverview, {
+      totalProducts: 1256,
+      totalMembers: 896,
+      activeMembers: 234,
+      lowStockCount: 15
+    })
+  }
+}
+
+// 加载低库存商品
+const loadLowStockProducts = async () => {
+  try {
+    console.log('⚠️ 开始加载低库存商品...')
+    const response = await dashboardApi.getLowStockProducts(10, 5) // 库存小于10的商品，最多显示5个
+    
+    if (response && response.success) {
+      lowStockProducts.value = response.data || []
+      console.log('✅ 低库存商品加载成功:', lowStockProducts.value.length, '个')
+    } else {
+      throw new Error(response?.message || '获取低库存商品失败')
+    }
+  } catch (error: any) {
+    console.error('❌ 加载低库存商品失败:', error)
+    
+    // 使用模拟数据
+    lowStockProducts.value = [
+      { productId: 1, productName: '矿泉水500ml', stockQuantity: 5 },
+      { productId: 2, productName: '牙刷', stockQuantity: 3 }
+    ]
+  }
+}
+
+// 加载所有数据
+const loadAllData = async () => {
+  statsLoading.value = true
+  
+  try {
+    // 并行加载所有数据
+    await Promise.all([
+      loadTodayStats(),
+      loadSystemOverview(),
+      loadLowStockProducts()
+    ])
+    
+    console.log('🎉 所有Dashboard数据加载完成')
+  } catch (error) {
+    console.error('❌ Dashboard数据加载出现错误:', error)
+  } finally {
+    statsLoading.value = false
+  }
+}
+
+// 刷新数据
+const refreshData = () => {
+  console.log('🔄 手动刷新Dashboard数据')
+  loadAllData()
+}
+
+// 其他方法保持不变
 const getGreeting = () => {
   const hour = new Date().getHours()
   if (hour < 12) return '早上好'
@@ -175,10 +335,18 @@ const updateTime = () => {
 
 // 生命周期
 let timeInterval: number
+let dataInterval: number
 
 onMounted(() => {
   updateTime()
   timeInterval = window.setInterval(updateTime, 1000)
+  
+  // 初始加载数据
+  loadAllData()
+  
+  // 每5分钟自动刷新数据
+  dataInterval = window.setInterval(loadAllData, 5 * 60 * 1000)
+  
   console.log('🎯 仪表盘页面已加载，当前用户:', currentUser.value)
 })
 
@@ -186,6 +354,14 @@ onUnmounted(() => {
   if (timeInterval) {
     clearInterval(timeInterval)
   }
+  if (dataInterval) {
+    clearInterval(dataInterval)
+  }
+})
+
+// 暴露刷新方法给模板使用
+defineExpose({
+  refreshData
 })
 </script>
 
@@ -248,6 +424,11 @@ onUnmounted(() => {
   box-shadow: 0 0 8px rgba(39, 174, 96, 0.5);
 }
 
+.status-dot.offline {
+  background: #f56c6c;
+  box-shadow: 0 0 8px rgba(245, 108, 108, 0.5);
+}
+
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -305,6 +486,10 @@ onUnmounted(() => {
   color: #27ae60;
 }
 
+.stat-change.negative {
+  color: #f56c6c;
+}
+
 .stat-subtitle {
   font-size: 0.85rem;
   color: #666;
@@ -348,6 +533,25 @@ onUnmounted(() => {
   width: 4px;
   height: 100%;
   background: #27ae60;
+}
+
+.stats-grid .stat-card {
+  position: relative;
+}
+
+.stats-grid .stat-card::after {
+  content: '🔄';
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 12px;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.stats-grid .stat-card:hover::after {
+  opacity: 0.5;
 }
 
 .quick-actions {
@@ -462,11 +666,24 @@ onUnmounted(() => {
 }
 
 .inventory-alerts {
+  background: white;
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   border-left: 4px solid #f39c12;
 }
 
-.inventory-alerts h3 {
+.inventory-alerts h2 {
+  margin: 0 0 20px 0;
   color: #f39c12;
+  font-size: 1.3rem;
+}
+
+.alert-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .alert-item {
@@ -493,6 +710,20 @@ onUnmounted(() => {
 .alert-desc {
   font-size: 0.8rem;
   color: #666;
+}
+
+.admin-stats, .manager-stats, .cashier-stats {
+  margin-top: 15px;
+  display: flex;
+  gap: 20px;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.admin-stats span, .manager-stats span, .cashier-stats span {
+  padding: 5px 10px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
 }
 
 .role-specific-info {

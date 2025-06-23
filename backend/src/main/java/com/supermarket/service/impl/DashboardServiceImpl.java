@@ -1,142 +1,164 @@
 package com.supermarket.service.impl;
 
+import com.supermarket.mapper.SaleMapper;
 import com.supermarket.service.DashboardService;
+import com.supermarket.service.MemberService;
+import com.supermarket.service.ProductService;
+import com.supermarket.service.SaleService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 @Service
 public class DashboardServiceImpl implements DashboardService {
 
+    @Autowired
+    private ProductService productService;
+    
+    @Autowired
+    private MemberService memberService;
+    
+    @Autowired(required = false)
+    private SaleService saleService;
+
+    @Autowired
+    private SaleMapper saleMapper;
     @Override
     public Map<String, Object> getTodayStats() {
         Map<String, Object> stats = new HashMap<>();
         
-        // 模拟今日销售数据
-        stats.put("todaySales", new BigDecimal("12680.50"));
-        stats.put("todayOrders", 89);
-        stats.put("todayCustomers", 76);
-        stats.put("todayProducts", 256);
-        
-        // 同比增长
-        stats.put("salesGrowth", 8.5);
-        stats.put("ordersGrowth", 12.3);
-        stats.put("customersGrowth", 6.8);
-        
-        // 统计时间
-        stats.put("updateTime", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-        
-        return stats;
-    }
+        try {
+            // 获取今日销售统计（如果有销售服务的话）
+            if (saleService != null) {
 
-    @Override
-    public List<Map<String, Object>> getLowStockProducts(Integer minStockLevel, Integer limit) {
-        List<Map<String, Object>> products = new ArrayList<>();
-        
-        // 模拟低库存商品数据，使用更真实的库存数据
-        String[][] lowStockData = {
-            {"可口可乐500ml", "6901028000001", "15", "50", "30.0"}, // 库存15，最低50，库存率30%
-            {"农夫山泉550ml", "6902148000002", "8", "30", "26.7"},  // 库存8，最低30，库存率26.7%
-            {"康师傅方便面", "6901326000003", "5", "20", "25.0"},    // 库存5，最低20，库存率25%
-            {"牙刷", "6901234000004", "12", "40", "30.0"},         // 库存12，最低40，库存率30%
-            {"洗发水", "6901234000005", "3", "15", "20.0"},        // 库存3，最低15，库存率20%
-            {"面包", "6901234000006", "6", "25", "24.0"},          // 库存6，最低25，库存率24%
-            {"酸奶", "6901234000007", "18", "60", "30.0"},         // 库存18，最低60，库存率30%
-            {"饼干", "6901234000008", "4", "20", "20.0"}           // 库存4，最低20，库存率20%
-        };
-        
-        int count = 0;
-        for (String[] data : lowStockData) {
-            if (count >= limit) break;
-            
-            int currentStock = Integer.parseInt(data[2]);
-            int minStock = Integer.parseInt(data[3]);
-            
-            // 只返回库存低于阈值的商品
-            if (currentStock <= minStockLevel && currentStock <= minStock) {
-                Map<String, Object> product = new HashMap<>();
-                product.put("productId", count + 1);
-                product.put("productName", data[0]);
-                product.put("barcode", data[1]);
-                product.put("currentStock", currentStock);
-                product.put("minStockLevel", minStock);
-                product.put("stockRatio", Double.parseDouble(data[4]));
-                
-                // 库存状态
-                if (currentStock == 0) {
-                    product.put("stockStatus", "零库存");
-                    product.put("urgencyLevel", "紧急");
-                } else if (currentStock <= minStock * 0.2) {
-                    product.put("stockStatus", "严重不足");
-                    product.put("urgencyLevel", "高");
-                } else if (currentStock <= minStock * 0.5) {
-                    product.put("stockStatus", "库存不足");
-                    product.put("urgencyLevel", "中");
-                } else {
-                    product.put("stockStatus", "偏低");
-                    product.put("urgencyLevel", "低");
-                }
-                
-                // 建议补货数量
-                int suggestedRestock = Math.max(minStock * 2 - currentStock, 0);
-                product.put("suggestedRestock", suggestedRestock);
-                
-                products.add(product);
-                count++;
+                LocalDate today = LocalDate.now();
+                LocalDateTime beginTime  = LocalDateTime.of(today, LocalTime.MIN);
+                LocalDateTime endTime = LocalDateTime.of(today, LocalTime.MAX);
+                int todaySalesAmount = saleMapper.getTodaySalesAmount(beginTime, endTime);
+                stats.put("todaySales", todaySalesAmount );
+                int todayOrders = saleMapper.getTodayOrders(beginTime, endTime);
+                stats.put("todayOrders", todayOrders);
+                stats.put("salesChange", 8.5);
+                stats.put("ordersChange", 12.3);
+            } else {
+                // 模拟数据
+                stats.put("todaySales", 8456.30);
+                stats.put("todayOrders", 67);
+                stats.put("salesChange", 15.2);
+                stats.put("ordersChange", 8.7);
             }
+            
+            System.out.println("✅ 今日统计数据生成: " + stats);
+            
+        } catch (Exception e) {
+            System.err.println("❌ 获取今日统计失败: " + e.getMessage());
+            // 返回默认值
+            stats.put("todaySales", 0.0);
+            stats.put("todayOrders", 0);
+            stats.put("salesChange", 0.0);
+            stats.put("ordersChange", 0.0);
         }
         
-        // 按库存比例排序，最紧急的排在前面
-        products.sort((a, b) -> {
-            Double ratioA = (Double) a.get("stockRatio");
-            Double ratioB = (Double) b.get("stockRatio");
-            return ratioA.compareTo(ratioB);
-        });
-        
-        return products;
+        return stats;
     }
 
     @Override
     public Map<String, Object> getSystemOverview() {
         Map<String, Object> overview = new HashMap<>();
         
-        overview.put("totalProducts", 1256);
-        overview.put("totalMembers", 896);
-        overview.put("totalSales", new BigDecimal("458970.50"));
-        overview.put("lowStockAlerts", 8);
-        overview.put("systemStatus", "正常");
-        overview.put("onlineUsers", 5);
+        try {
+            // 获取商品总数
+            long totalProducts = productService.count();
+            overview.put("totalProducts", totalProducts);
+            
+            // 获取会员总数
+            long totalMembers = memberService.count();
+            overview.put("totalMembers", totalMembers);
+            
+            // 获取活跃会员数（模拟：总会员数的30%）
+            long activeMembers = Math.round(totalMembers * 0.3);
+            overview.put("activeMembers", activeMembers);
+            
+            // 获取低库存商品数量
+            List<Map<String, Object>> lowStockProducts = getLowStockProducts(10, 100);
+            overview.put("lowStockCount", lowStockProducts.size());
+            
+            System.out.println("✅ 系统概览数据: " + overview);
+            
+        } catch (Exception e) {
+            System.err.println("❌ 获取系统概览失败: " + e.getMessage());
+            // 返回默认值
+            overview.put("totalProducts", 0);
+            overview.put("totalMembers", 0);
+            overview.put("activeMembers", 0);
+            overview.put("lowStockCount", 0);
+        }
         
         return overview;
+    }
+
+    @Override
+    public List<Map<String, Object>> getLowStockProducts(Integer minStockLevel, Integer limit) {
+        List<Map<String, Object>> products = new ArrayList<>();
+        
+        try {
+            // TODO: 实现真实的低库存查询
+            // 这里应该查询数据库中库存小于minStockLevel的商品
+            
+            // 模拟低库存商品数据
+            if (minStockLevel <= 10) {
+                Map<String, Object> product1 = new HashMap<>();
+                product1.put("productId", 1);
+                product1.put("productName", "矿泉水500ml");
+                product1.put("stockQuantity", 5);
+                product1.put("minStockLevel", 20);
+                products.add(product1);
+                
+                Map<String, Object> product2 = new HashMap<>();
+                product2.put("productId", 2);
+                product2.put("productName", "牙刷");
+                product2.put("stockQuantity", 3);
+                product2.put("minStockLevel", 10);
+                products.add(product2);
+            }
+            
+            // 限制返回数量
+            if (products.size() > limit) {
+                products = products.subList(0, limit);
+            }
+            
+            System.out.println("✅ 低库存商品查询完成: " + products.size() + " 个");
+            
+        } catch (Exception e) {
+            System.err.println("❌ 获取低库存商品失败: " + e.getMessage());
+        }
+        
+        return products;
     }
 
     @Override
     public List<Map<String, Object>> getRecentActivities(Integer limit) {
         List<Map<String, Object>> activities = new ArrayList<>();
         
-        String[] activityTypes = {"销售", "进货", "会员注册", "库存预警", "用户登录"};
-        String[] descriptions = {
-            "收银员张三完成了一笔¥156.80的交易",
-            "商品管理员李四登记了一批新进货",
-            "新会员王五注册成功",
-            "商品'可口可乐500ml'库存不足",
-            "系统管理员admin登录系统"
-        };
-        
-        for (int i = 0; i < Math.min(limit, descriptions.length); i++) {
-            Map<String, Object> activity = new HashMap<>();
-            activity.put("id", i + 1);
-            activity.put("type", activityTypes[i]);
-            activity.put("description", descriptions[i]);
-            activity.put("time", LocalDateTime.now().minusMinutes(i * 15)
-                .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
-            activity.put("operator", i % 2 == 0 ? "张三" : "李四");
+        try {
+            // TODO: 实现真实的活动记录查询
+            // 模拟最近活动数据
+            for (int i = 0; i < Math.min(limit, 5); i++) {
+                Map<String, Object> activity = new HashMap<>();
+                activity.put("id", i + 1);
+                activity.put("type", i % 2 == 0 ? "sale" : "product");
+                activity.put("description", i % 2 == 0 ? "完成销售订单" : "添加新商品");
+                activity.put("time", LocalDate.now().minusDays(i).format(DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                activities.add(activity);
+            }
             
-            activities.add(activity);
+        } catch (Exception e) {
+            System.err.println("❌ 获取最近活动失败: " + e.getMessage());
         }
         
         return activities;
@@ -146,24 +168,23 @@ public class DashboardServiceImpl implements DashboardService {
     public Map<String, Object> getSalesChart(Integer days) {
         Map<String, Object> chartData = new HashMap<>();
         
-        List<String> dates = new ArrayList<>();
-        List<BigDecimal> sales = new ArrayList<>();
-        
-        LocalDate today = LocalDate.now();
-        Random random = new Random();
-        
-        for (int i = days - 1; i >= 0; i--) {
-            LocalDate date = today.minusDays(i);
-            dates.add(date.format(DateTimeFormatter.ofPattern("MM-dd")));
+        try {
+            // TODO: 实现真实的销售趋势数据
+            List<String> dates = new ArrayList<>();
+            List<Double> sales = new ArrayList<>();
             
-            // 模拟销售额：基础金额 + 随机波动
-            double baseSales = 8000 + random.nextGaussian() * 2000;
-            sales.add(new BigDecimal(Math.max(baseSales, 1000)).setScale(2, BigDecimal.ROUND_HALF_UP));
+            // 模拟最近几天的销售数据
+            for (int i = days - 1; i >= 0; i--) {
+                dates.add(LocalDate.now().minusDays(i).format(DateTimeFormatter.ofPattern("MM-dd")));
+                sales.add(Math.random() * 10000 + 5000); // 随机生成5000-15000的销售额
+            }
+            
+            chartData.put("dates", dates);
+            chartData.put("sales", sales);
+            
+        } catch (Exception e) {
+            System.err.println("❌ 获取销售趋势数据失败: " + e.getMessage());
         }
-        
-        chartData.put("dates", dates);
-        chartData.put("sales", sales);
-        chartData.put("period", days + "天");
         
         return chartData;
     }
@@ -172,28 +193,22 @@ public class DashboardServiceImpl implements DashboardService {
     public List<Map<String, Object>> getTopProducts(Integer limit) {
         List<Map<String, Object>> products = new ArrayList<>();
         
-        String[][] topProductData = {
-            {"可口可乐500ml", "380", "1330.00"},
-            {"农夫山泉550ml", "295", "737.50"},
-            {"康师傅方便面", "268", "1206.00"},
-            {"奥利奥饼干", "242", "1938.00"},
-            {"旺旺雪饼", "189", "945.00"},
-            {"统一绿茶", "167", "500.10"},
-            {"德芙巧克力", "156", "2496.00"},
-            {"三只松鼠坚果", "145", "2900.00"},
-            {"蒙牛纯牛奶", "134", "804.00"},
-            {"立白洗衣粉", "128", "1024.00"}
-        };
-        
-        for (int i = 0; i < Math.min(limit, topProductData.length); i++) {
-            Map<String, Object> product = new HashMap<>();
-            product.put("rank", i + 1);
-            product.put("productName", topProductData[i][0]);
-            product.put("salesQuantity", Integer.parseInt(topProductData[i][1]));
-            product.put("salesAmount", new BigDecimal(topProductData[i][2]));
-            product.put("trend", i % 3 == 0 ? "上升" : (i % 3 == 1 ? "下降" : "持平"));
+        try {
+            // TODO: 实现真实的热销商品排行
+            // 模拟热销商品数据
+            String[] productNames = {"可口可乐500ml", "农夫山泉550ml", "康师傅方便面", "牙刷", "洗发水"};
             
-            products.add(product);
+            for (int i = 0; i < Math.min(limit, productNames.length); i++) {
+                Map<String, Object> product = new HashMap<>();
+                product.put("productId", i + 1);
+                product.put("productName", productNames[i]);
+                product.put("salesCount", 100 - i * 10); // 模拟销量递减
+                product.put("revenue", (100 - i * 10) * (3.5 + i * 0.5)); // 模拟营收
+                products.add(product);
+            }
+            
+        } catch (Exception e) {
+            System.err.println("❌ 获取热销商品排行失败: " + e.getMessage());
         }
         
         return products;

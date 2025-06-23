@@ -189,4 +189,29 @@ public class SaleController {
             return Result.error("获取销售报表失败: " + e.getMessage());
         }
     }
+
+    /**
+     * 收银台结算
+     */
+    @PostMapping("/checkout")
+    public Result<Map<String, Object>> checkout(@RequestBody Map<String, Object> checkoutData) {
+        try {
+            System.out.println("🛒 收银台结算请求: " + checkoutData);
+            checkoutData.forEach((key, value) -> System.out.println("  " + key + ": " + value));
+            Map<String, Object> result = saleService.processCheckout(checkoutData);
+
+            if ((Boolean) result.get("success")) {
+                System.out.println("✅ 结算成功: " + result);
+                return Result.success("结算成功", result);
+            } else {
+                System.err.println("❌ 结算失败: " + result.get("message"));
+                return Result.error(result.get("message").toString());
+            }
+
+        } catch (Exception e) {
+            System.err.println("❌ 结算异常: " + e.getMessage());
+            e.printStackTrace();
+            return Result.error("结算失败: " + e.getMessage());
+        }
+    }
 }

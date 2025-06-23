@@ -8,6 +8,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class SaleItemServiceImpl extends ServiceImpl<SaleItemMapper, SaleItem> implements SaleItemService {
-    // 基础CRUD方法由ServiceImpl提供
-    // 可以在这里添加自定义业务方法
 }
+    // 可以在这里添加自定义业务方法
+

@@ -5,14 +5,14 @@
     <!-- 结果映射 -->
     <resultMap id="BaseResultMap" type="com.supermarket.entity.Sale">
         <id column="sale_id" property="saleId" jdbcType="BIGINT"/>
-        <result column="order_number" property="orderNumber" jdbcType="VARCHAR"/>
+        <result column="sale_number" property="saleNumber" jdbcType="VARCHAR"/>
         <result column="total_amount" property="totalAmount" jdbcType="DECIMAL"/>
         <result column="discount_amount" property="discountAmount" jdbcType="DECIMAL"/>
         <result column="final_amount" property="finalAmount" jdbcType="DECIMAL"/>
         <result column="payment_method" property="paymentMethod" jdbcType="VARCHAR"/>
         <result column="cashier_id" property="cashierId" jdbcType="BIGINT"/>
         <result column="member_id" property="memberId" jdbcType="BIGINT"/>
-        <result column="sale_time" property="saleTime" jdbcType="TIMESTAMP"/>
+        <result column="sale_date" property="saleDate" jdbcType="TIMESTAMP"/>
         <result column="status" property="status" jdbcType="VARCHAR"/>
         <result column="created_at" property="createdAt" jdbcType="TIMESTAMP"/>
         <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP"/>
@@ -30,7 +30,7 @@
     <select id="getTotalSalesByDate" parameterType="java.time.LocalDate" resultType="java.math.BigDecimal">
         select coalesce(sum(final_amount), 0) 
         from sales 
-        where date(sale_time) = #{date}
+        where date(sale_date) = #{date}
         and status = 'completed'
     </select>
 
@@ -38,7 +38,7 @@
     <select id="getOrderCountByDate" parameterType="java.time.LocalDate" resultType="java.lang.Integer">
         select count(*) 
         from sales 
-        where date(sale_time) = #{date}
+        where date(sale_date) = #{date}
         and status = 'completed'
     </select>
 
@@ -46,17 +46,17 @@
     <select id="getUniqueCustomerCountByDate" parameterType="java.time.LocalDate" resultType="java.lang.Integer">
         select count(distinct coalesce(member_id, concat('guest_', sale_id))) 
         from sales 
-        where date(sale_time) = #{date}
+        where date(sale_date) = #{date}
         and status = 'completed'
     </select>
 
     <!-- 获取最近销售活动 -->
     <select id="getRecentSalesActivities" parameterType="java.lang.Integer" resultType="java.util.Map">
-        select s.sale_id, s.total_amount, s.sale_time, u.username as cashier_name
+        select s.sale_id, s.total_amount, s.sale_date, u.username as cashier_name
         from sales s 
         left join users u on s.cashier_id = u.user_id
         where s.status = 'completed'
-        order by s.sale_time desc 
+        order by s.sale_date desc
         limit #{limit}
     </select>
 
@@ -67,7 +67,7 @@
                coalesce(sum(s.final_amount), 0) as sales_amount
         from sales s 
         left join users u on s.cashier_id = u.user_id
-        where date(s.sale_time) = curdate() 
+        where date(s.sale_date) = curdate()
         and s.status = 'completed'
         group by s.cashier_id, u.username
         order by sales_amount desc
@@ -75,13 +75,13 @@
 
     <!-- 获取今日小时销售数据 -->
     <select id="getHourlySalesToday" resultType="java.util.Map">
-        select hour(sale_time) as hour, 
+        select hour(sale_date) as hour,
                count(*) as orders, 
                sum(final_amount) as sales
         from sales 
-        where date(sale_time) = curdate() 
+        where date(sale_date) = curdate()
         and status = 'completed'
-        group by hour(sale_time) 
+        group by hour(sale_date)
         order by hour
     </select>
 
@@ -92,7 +92,7 @@
         left join members m on s.member_id = m.member_id
         where s.cashier_id = #{cashierId}
         and s.status = 'completed'
-        order by s.sale_time desc 
+        order by s.sale_date desc
         limit #{limit}
     </select>
 
@@ -101,7 +101,7 @@
         select coalesce(sum(final_amount), 0) 
         from sales
         where cashier_id = #{cashierId} 
-        and date(sale_time) = curdate()
+        and date(sale_date) = curdate()
         and status = 'completed'
     </select>
 
@@ -110,8 +110,20 @@
         select count(*) 
         from sales
         where cashier_id = #{cashierId} 
-        and date(sale_time) = curdate()
+        and date(sale_date) = curdate()
         and status = 'completed'
     </select>
 
+    <insert id="insert" parameterType="com.supermarket.entity.Sale" useGeneratedKeys="true" keyProperty="saleId">
+        INSERT INTO sales (
+            sale_number, member_id, cashier_id, total_amount, 
+            discount_amount, final_amount, payment_method, 
+            status, sale_date
+        ) VALUES (
+            #{saleNumber}, #{memberId}, #{cashierId}, #{totalAmount},
+            #{discountAmount}, #{finalAmount}, #{paymentMethod},
+            #{status}, #{saleDate}
+        )
+    </insert>
+    
 </mapper>

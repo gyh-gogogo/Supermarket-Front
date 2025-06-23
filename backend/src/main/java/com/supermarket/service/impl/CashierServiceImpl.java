@@ -59,9 +59,10 @@ public class CashierServiceImpl implements CashierService {
             // 解析结算数据
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> items = (List<Map<String, Object>>) checkoutData.get("items");
-            BigDecimal totalAmount = new BigDecimal(checkoutData.get("totalAmount").toString());
-            BigDecimal discountAmount = new BigDecimal(checkoutData.get("discountAmount").toString());
-            BigDecimal finalAmount = new BigDecimal(checkoutData.get("finalAmount").toString());
+            double totalAmountDouble = new BigDecimal(checkoutData.get("totalAmount").toString()).doubleValue();
+            double discountAmountDouble = new BigDecimal(checkoutData.get("discountAmount").toString()).doubleValue();
+            double finalAmountDouble = new BigDecimal(checkoutData.get("finalAmount").toString()).doubleValue();
+
             String paymentMethod = checkoutData.get("paymentMethod").toString();
             Long memberId = checkoutData.get("memberId") != null ? 
                 Long.valueOf(checkoutData.get("memberId").toString()) : null;
@@ -69,17 +70,17 @@ public class CashierServiceImpl implements CashierService {
 
             // 创建销售记录
             Sale sale = new Sale();
-            sale.setTotalAmount(totalAmount);
-            sale.setDiscountAmount(discountAmount);
-            sale.setFinalAmount(finalAmount);
+            sale.setTotalAmount(totalAmountDouble);
+            sale.setDiscountAmount(discountAmountDouble);
+            sale.setFinalAmount(finalAmountDouble);
             sale.setPaymentMethod(paymentMethod);
             sale.setCashierId(cashierId);
             sale.setMemberId(memberId);
-            sale.setSaleTime(LocalDateTime.now());
+            sale.setSaleDate(LocalDateTime.now());
             sale.setStatus("completed");
             // 生成订单号
             String orderNumber = generateOrderNumber();
-            sale.setOrderNumber(orderNumber);
+            sale.setSaleNumber(orderNumber);
 
             // 保存销售记录
             int saleResult = saleMapper.insert(sale);
@@ -94,7 +95,9 @@ public class CashierServiceImpl implements CashierService {
                 Long productId = Long.valueOf(item.get("productId").toString());
                 Integer quantity = Integer.valueOf(item.get("quantity").toString());
                 BigDecimal price = new BigDecimal(item.get("price").toString());
+                double priceDouble = price.doubleValue();
                 BigDecimal subtotal = new BigDecimal(item.get("subtotal").toString());
+                double subtotalDouble=subtotal.doubleValue();
 
                 // 检查库存
                 Product product = productMapper.selectById(productId);
@@ -111,8 +114,8 @@ public class CashierServiceImpl implements CashierService {
                 saleItem.setSaleId(saleId);
                 saleItem.setProductId(productId);
                 saleItem.setQuantity(quantity);
-                saleItem.setPrice(price);
-                saleItem.setSubtotal(subtotal);
+                saleItem.setUnitPrice(priceDouble);
+                saleItem.setSubtotal(subtotalDouble);
 
                 saleItemMapper.insert(saleItem);
 
@@ -215,8 +218,8 @@ public class CashierServiceImpl implements CashierService {
         
         // 构建小票数据
         receipt.put("success", true);
-        receipt.put("orderNumber", sale.getOrderNumber());
-        receipt.put("saleTime", sale.getSaleTime());
+        receipt.put("orderNumber", sale.getSaleNumber());
+        receipt.put("saleTime", sale.getSaleDate());
         receipt.put("totalAmount", sale.getTotalAmount());
         receipt.put("discountAmount", sale.getDiscountAmount());
         receipt.put("finalAmount", sale.getFinalAmount());

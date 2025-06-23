@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.supermarket.entity.Product;
+import com.supermarket.mapper.CategoryMapper;
+import com.supermarket.mapper.ProductMapper;
 import com.supermarket.service.ProductService;
 import com.supermarket.common.Result;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/products")
@@ -20,14 +23,21 @@ public class ProductController {
     @Autowired
     private ProductService productService;
 
-    // 分页查询商品
+
+    @Autowired
+    private ProductMapper productMapper;
+    /**
+     * 分页查询商品（支持分类筛选）
+     */
     @GetMapping("/page")
     public Result<IPage<Product>> getPage(
             @RequestParam(defaultValue = "1") Long current,
             @RequestParam(defaultValue = "10") Long size,
-            @RequestParam(required = false) String productName) {
+            @RequestParam(required = false) String productName,
+            @RequestParam(required = false) Long categoryId) {
         try {
-            System.out.println("📦 分页查询商品 - 页码:" + current + ", 大小:" + size + ", 商品名:" + productName);
+            System.out.println("📦 分页查询商品 - 页码:" + current + ", 大小:" + size);
+            System.out.println("🔍 查询条件 - 商品名:" + productName + ", 分类ID:" + categoryId);
             
             Page<Product> page = new Page<>(current, size);
             QueryWrapper<Product> queryWrapper = new QueryWrapper<>();
@@ -35,51 +45,55 @@ public class ProductController {
             if (productName != null && !productName.trim().isEmpty()) {
                 queryWrapper.like("product_name", productName.trim());
             }
+            if (categoryId != null) {
+                queryWrapper.eq("category_id", categoryId);
+            }
             
             queryWrapper.eq("status", "active");
             queryWrapper.orderByDesc("created_at");
             
             IPage<Product> productPage = productService.page(page, queryWrapper);
             
-            System.out.println("✅ 查询成功，共" + productPage.getTotal() + "条商品记录");
+            // 为每个商品添加分类名称
+            for (Product product : productPage.getRecords()) {
+                if (product.getCategoryId() != null) {
+                    String categoryName = getCategoryNameById(product.getCategoryId());
+                    product.setCategoryName(categoryName);
+                }
+            }
+            
+            System.out.println("✅ 查询成功，共" + productPage.getTotal() + "条记录");
             return Result.success(productPage);
             
         } catch (Exception e) {
             e.printStackTrace();
-            return Result.error("查询商品失败: " + e.getMessage());
+            return Result.error("查询失败: " + e.getMessage());
         }
     }
 
-    // 创建商品
+    /**
+     * 创建商品
+     */
     @PostMapping
     public Result<Product> create(@RequestBody Product product) {
         try {
-            System.out.println("创建商品: " + product.getProductName());
-            
-            // 检查条码是否已存在
-            if (product.getBarcode() != null && !product.getBarcode().trim().isEmpty()) {
-                QueryWrapper<Product> checkQuery = new QueryWrapper<>();
-                checkQuery.eq("barcode", product.getBarcode());
-                long barcodeCount = productService.count(checkQuery);
-                if (barcodeCount > 0) {
-                    return Result.error("商品条码已存在");
-                }
-            }
+            System.out.println("➕ 创建商品: " + product.getProductName());
+            System.out.println("📂 所属分类ID: " + product.getCategoryId());
             
             // 设置默认值
-            if (product.getStatus() == null) {
-                product.setStatus("active");
-            }
-            if (product.getMinStockLevel() == null) {
-                product.setMinStockLevel(10);
-            }
+            product.setStatus("active");
             product.setCreatedAt(LocalDateTime.now());
             product.setUpdatedAt(LocalDateTime.now());
             
             boolean success = productService.save(product);
             if (success) {
+                // 添加分类名称到返回数据
+                if (product.getCategoryId() != null) {
+                    product.setCategoryName(getCategoryNameById(product.getCategoryId()));
+                }
+                
                 System.out.println("✅ 商品创建成功，ID: " + product.getProductId());
-                return Result.success(product);
+                return Result.success("创建成功", product);
             } else {
                 return Result.error("创建失败");
             }
@@ -87,6 +101,21 @@ public class ProductController {
             e.printStackTrace();
             return Result.error("创建失败: " + e.getMessage());
         }
+    }
+    
+    /**
+     * 根据分类ID获取分类名称
+     */
+    private String getCategoryNameById(Long categoryId) {
+        // 模拟分类数据映射
+        Map<Long, String> categoryMap = Map.of(
+            1L, "食品饮料",
+            2L, "日用百货", 
+            3L, "服装鞋帽",
+            4L, "图书文具",
+            5L, "电子产品"
+        );
+        return categoryMap.getOrDefault(categoryId, "未知分类");
     }
 
     // 更新商品
