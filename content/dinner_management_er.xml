@@ -1,0 +1,185 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 Edg/128.0.0.0" version="27.0.5">
+  <diagram name="餐饮管理系统ER图" id="dinner_management_er">
+    <mxGraphModel dx="1205" dy="775" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="sys_user" value="sys_user&#xa;用户表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="50" y="50" width="180" height="220" as="geometry" />
+        </mxCell>
+        <mxCell id="sys_user_attrs" value="id (PK) BIGINT&#xa;username VARCHAR(50)&#xa;password VARCHAR(255)&#xa;real_name VARCHAR(50)&#xa;phone VARCHAR(20)&#xa;email VARCHAR(100)&#xa;role_type ENUM&#xa;status TINYINT&#xa;create_time DATETIME&#xa;update_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="sys_user" vertex="1">
+          <mxGeometry y="40" width="180" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="member" value="member&#xa;会员表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="50" width="180" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="member_attrs" value="id (PK) BIGINT&#xa;member_no VARCHAR(20)&#xa;name VARCHAR(50)&#xa;phone VARCHAR(20)&#xa;gender ENUM&#xa;birthday DATE&#xa;balance DECIMAL(10,2)&#xa;points INT&#xa;level_id BIGINT (FK)&#xa;status TINYINT&#xa;create_time DATETIME&#xa;update_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="member" vertex="1">
+          <mxGeometry y="40" width="180" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="member_level" value="member_level&#xa;会员等级表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="550" y="50" width="180" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="member_level_attrs" value="id (PK) BIGINT&#xa;level_name VARCHAR(20)&#xa;min_points INT&#xa;discount_rate DECIMAL(3,2)&#xa;create_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="member_level" vertex="1">
+          <mxGeometry y="40" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dish_category" value="dish_category&#xa;菜品分类表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="50" y="320" width="180" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dish_category_attrs" value="id (PK) BIGINT&#xa;name VARCHAR(50)&#xa;sort_order INT&#xa;status TINYINT&#xa;create_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="dish_category" vertex="1">
+          <mxGeometry y="40" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="dish" value="dish&#xa;菜品表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#d5e8d4;strokeColor=#82b366;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="320" width="180" height="180" as="geometry" />
+        </mxCell>
+        <mxCell id="dish_attrs" value="id (PK) BIGINT&#xa;name VARCHAR(100)&#xa;category_id BIGINT (FK)&#xa;price DECIMAL(8,2)&#xa;image VARCHAR(255)&#xa;description TEXT&#xa;status TINYINT&#xa;create_time DATETIME&#xa;update_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="dish" vertex="1">
+          <mxGeometry y="40" width="180" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="dining_table" value="dining_table&#xa;餐桌表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#ffe6cc;strokeColor=#d79b00;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="550" y="320" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="dining_table_attrs" value="id (PK) BIGINT&#xa;table_no VARCHAR(10)&#xa;seat_count INT&#xa;status ENUM&#xa;create_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="dining_table" vertex="1">
+          <mxGeometry y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="orders" value="orders&#xa;订单表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#e1d5e7;strokeColor=#9673a6;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="300" y="550" width="200" height="280" as="geometry" />
+        </mxCell>
+        <mxCell id="orders_attrs" value="id (PK) BIGINT&#xa;order_no VARCHAR(32)&#xa;table_id BIGINT (FK)&#xa;member_id BIGINT (FK)&#xa;waiter_id BIGINT (FK)&#xa;cashier_id BIGINT (FK)&#xa;total_amount DECIMAL(10,2)&#xa;discount_amount DECIMAL(10,2)&#xa;final_amount DECIMAL(10,2)&#xa;payment_method ENUM&#xa;status ENUM&#xa;order_time DATETIME&#xa;pay_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="orders" vertex="1">
+          <mxGeometry y="40" width="200" height="240" as="geometry" />
+        </mxCell>
+        <mxCell id="order_detail" value="order_detail&#xa;订单详情表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#dae8fc;strokeColor=#6c8ebf;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="550" y="550" width="180" height="160" as="geometry" />
+        </mxCell>
+        <mxCell id="order_detail_attrs" value="id (PK) BIGINT&#xa;order_id BIGINT (FK)&#xa;dish_id BIGINT (FK)&#xa;dish_name VARCHAR(100)&#xa;price DECIMAL(8,2)&#xa;quantity INT&#xa;subtotal DECIMAL(10,2)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="order_detail" vertex="1">
+          <mxGeometry y="40" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="member_consume_record" value="member_consume_record&#xa;会员消费记录表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#fff2cc;strokeColor=#d6b656;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="50" y="550" width="180" height="140" as="geometry" />
+        </mxCell>
+        <mxCell id="member_consume_record_attrs" value="id (PK) BIGINT&#xa;member_id BIGINT (FK)&#xa;order_id BIGINT (FK)&#xa;consume_amount DECIMAL(10,2)&#xa;points_earned INT&#xa;consume_time DATETIME" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="member_consume_record" vertex="1">
+          <mxGeometry y="40" width="180" height="100" as="geometry" />
+        </mxCell>
+        <mxCell id="system_config" value="system_config&#xa;系统配置表" style="swimlane;fontStyle=1;childLayout=stackLayout;horizontal=1;startSize=40;fillColor=#f8cecc;strokeColor=#b85450;fontColor=#000000;" parent="1" vertex="1">
+          <mxGeometry x="800" y="50" width="180" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="system_config_attrs" value="id (PK) BIGINT&#xa;config_key VARCHAR(50)&#xa;config_value VARCHAR(255)&#xa;description VARCHAR(255)" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;" parent="system_config" vertex="1">
+          <mxGeometry y="40" width="180" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="member_level_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=0;exitY=0.5;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="member_level_attrs" target="member_attrs" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="400" as="sourcePoint" />
+            <mxPoint x="440" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="member_level_label" value="level_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="member_level_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dish_category_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="dish_category_attrs" target="dish_attrs" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="500" as="sourcePoint" />
+            <mxPoint x="440" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dish_category_label" value="category_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="dish_category_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="member_orders_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="member" target="orders" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="400" as="sourcePoint" />
+            <mxPoint x="440" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="member_orders_label" value="member_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="member_orders_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="table_orders_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=1;entryY=0;entryDx=0;entryDy=0;" parent="1" source="dining_table" target="orders" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="500" as="sourcePoint" />
+            <mxPoint x="440" y="450" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="table_orders_label" value="table_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="table_orders_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="waiter_orders_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0;entryY=0.3;entryDx=0;entryDy=0;" parent="1" source="sys_user" target="orders_attrs" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="400" as="sourcePoint" />
+            <mxPoint x="440" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="waiter_orders_label" value="waiter_id&#xa;cashier_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="waiter_orders_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="orders_detail_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=1;exitY=0.5;exitDx=0;exitDy=0;entryX=0;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="orders_attrs" target="order_detail_attrs" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="700" as="sourcePoint" />
+            <mxPoint x="440" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="orders_detail_label" value="order_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="orders_detail_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dish_detail_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=1;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="dish" target="order_detail" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="600" as="sourcePoint" />
+            <mxPoint x="440" y="550" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="dish_detail_label" value="dish_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="dish_detail_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="member_record_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=0;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="member" target="member_consume_record" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="400" as="sourcePoint" />
+            <mxPoint x="440" y="350" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="member_record_label" value="member_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="member_record_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="orders_record_rel" value="" style="endArrow=ERoneToMany;html=1;rounded=0;exitX=0;exitY=0.8;exitDx=0;exitDy=0;entryX=1;entryY=0.5;entryDx=0;entryDy=0;" parent="1" source="orders_attrs" target="member_consume_record_attrs" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="390" y="700" as="sourcePoint" />
+            <mxPoint x="440" y="650" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="orders_record_label" value="order_id" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];" parent="orders_record_rel" vertex="1" connectable="0">
+          <mxGeometry x="-0.1" y="-1" relative="1" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="legend_title" value="图例说明" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontStyle=1;fontSize=16;" parent="1" vertex="1">
+          <mxGeometry x="800" y="250" width="100" height="30" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_pk" value="PK = Primary Key (主键)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="800" y="290" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_fk" value="FK = Foreign Key (外键)" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="800" y="320" width="160" height="20" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_rel" value="1:N = 一对多关系" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" parent="1" vertex="1">
+          <mxGeometry x="800" y="350" width="160" height="20" as="geometry" />
+        </mxCell>
+tml=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+          <mxGeometry x="800" y="350" width="160" height="20" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

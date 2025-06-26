@@ -73,7 +73,7 @@ public interface ProductMapper extends BaseMapper<Product> {
             "(stock_quantity / min_stock_level) as stock_ratio " +
             "FROM products WHERE stock_quantity <= min_stock_level " +
             "AND status = 'active' ORDER BY stock_ratio ASC")
-    List<Map<String, Object>> getLowStockProducts();
+    List<Product> getLowStockProducts();
 
     /**
      * 统计商品总数

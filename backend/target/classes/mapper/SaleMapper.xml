@@ -60,18 +60,6 @@
         limit #{limit}
     </select>
 
-    <!-- 获取收银员今日业绩 -->
-    <select id="getCashierPerformanceToday" resultType="java.util.Map">
-        select u.username as cashier_name, 
-               count(*) as orders_count,
-               coalesce(sum(s.final_amount), 0) as sales_amount
-        from sales s 
-        left join users u on s.cashier_id = u.user_id
-        where date(s.sale_date) = curdate()
-        and s.status = 'completed'
-        group by s.cashier_id, u.username
-        order by sales_amount desc
-    </select>
 
     <!-- 获取今日小时销售数据 -->
     <select id="getHourlySalesToday" resultType="java.util.Map">

@@ -1,34 +1,27 @@
 package com.supermarket.service.impl;
 
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.supermarket.entity.Member;
 import com.supermarket.entity.Sale;
 import com.supermarket.entity.SaleItem;
-import com.supermarket.mapper.MemberMapper;
+import com.supermarket.entity.Member;
 import com.supermarket.mapper.SaleMapper;
-import com.supermarket.service.MemberService;
 import com.supermarket.service.SaleService;
 import com.supermarket.service.SaleItemService;
+import com.supermarket.service.MemberService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 
 @Service
 public class SaleServiceImpl extends ServiceImpl<SaleMapper, Sale> implements SaleService {
 
     @Autowired
     private SaleItemService saleItemService;
+    
     @Autowired
     private MemberService memberService;
 

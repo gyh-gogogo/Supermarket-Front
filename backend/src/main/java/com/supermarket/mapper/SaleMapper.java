@@ -35,13 +35,13 @@ public interface SaleMapper extends BaseMapper<Sale> {
     /**
      * 按月份获取销售总额
      */
-    @Select("SELECT COALESCE(SUM(final_amount), 0) FROM sales WHERE YEAR(sale_time) = #{year} AND MONTH(sale_time) = #{month}")
+    @Select("SELECT COALESCE(SUM(final_amount), 0) FROM sales WHERE YEAR(sale_date) = #{year} AND MONTH(sale_date) = #{month}")
     BigDecimal getTotalSalesByMonth(int year, int month);
 
     /**
      * 按月份获取订单数量
      */
-    @Select("SELECT COUNT(*) FROM sales WHERE YEAR(sale_time) = #{year} AND MONTH(sale_time) = #{month}")
+    @Select("SELECT COUNT(*) FROM sales WHERE YEAR(sale_date) = #{year} AND MONTH(sale_date) = #{month}")
     int getOrderCountByMonth(int year, int month);
 
     /**
@@ -49,10 +49,6 @@ public interface SaleMapper extends BaseMapper<Sale> {
      */
     List<Map<String, Object>> getRecentSalesActivities(int limit);
 
-    /**
-     * 获取收银员今日业绩
-     */
-    List<Map<String, Object>> getCashierPerformanceToday();
 
     /**
      * 获取今日小时销售数据
@@ -77,6 +73,18 @@ public interface SaleMapper extends BaseMapper<Sale> {
     @Select("select count(*) from sales where sales.sale_date >= #{beginTime} and sales.sale_date <= #{endTime}")
     int getTodayOrders(LocalDateTime beginTime, LocalDateTime endTime);
 
+    /**
+     * 获取所有销售总额
+     */
+    @Select("select sum(final_amount) from sales")
+    double getAllSalesAmount();
+
+
+    /**
+     * 获取所有订单数
+     */
+    @Select("select count(*) from sales")
+    double getAllOrders();
 
     /**
      * 获取收银员今日订单数

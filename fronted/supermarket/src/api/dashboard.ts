@@ -16,6 +16,25 @@ export interface SystemOverview {
   lowStockCount: number
 }
 
+export interface SalesChartData {
+  dates: string[]
+  sales: number[]
+  orders: number[]
+}
+
+export interface SalesReportData {
+  summary: {
+    totalRevenue: number
+    totalOrders: number
+    avgOrderValue: number
+    totalItems: number
+  }
+  records: any[]
+  total: number
+  current: number
+  size: number
+}
+
 export const dashboardApi = {
   // 获取今日统计数据
   getTodayStats: () => {
@@ -59,5 +78,16 @@ export const dashboardApi = {
     return request.get('/api/dashboard/top-products', {
       params: { limit }
     })
+  },
+
+  // 获取销售报表数据
+  getSalesReport: (params: {
+    startDate?: string
+    endDate?: string
+    current?: number
+    size?: number
+  }) => {
+    console.log('📊 调用销售报表API')
+    return request.get('/api/dashboard/sales-report', { params })
   }
 }

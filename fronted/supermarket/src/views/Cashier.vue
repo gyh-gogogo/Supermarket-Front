@@ -335,7 +335,6 @@
         </div>
       </div>
       <template #footer>
-        <el-button @click="printReceipt">🖨️ 打印小票</el-button>
         <el-button type="primary" @click="nextOrder">➡️ 下一单</el-button>
       </template>
     </el-dialog>
@@ -890,6 +889,7 @@ watch(totalAmount, () => {
   padding: 15px;
   height: calc(100vh - 30px);
   overflow: hidden;
+  background: #f8f9fa;
 }
 
 .cashier-layout {
@@ -903,10 +903,11 @@ watch(totalAmount, () => {
   background: white;
   border-radius: 12px;
   padding: 20px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  border: 1px solid #e6e6e6;
 }
 
 .scan-section {
@@ -922,52 +923,67 @@ watch(totalAmount, () => {
 
 .scan-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 1.2rem;
 }
 
 .scan-stats {
   display: flex;
   gap: 15px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .scan-count {
-  color: #666;
+  color: #2c3e50;
+  font-weight: 500;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .total-preview {
-  color: #e67e22;
+  color: #d35400;
   font-weight: bold;
+  background: #fef7e0;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .search-suggestions {
   margin-top: 10px;
-  border: 1px solid #e6e6e6;
+  border: 2px solid #409eff;
   border-radius: 8px;
   background: white;
   max-height: 200px;
   overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .suggestions-header {
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e6e6e6;
+  padding: 10px 15px;
+  background: #409eff;
+  color: white;
   font-size: 0.9rem;
-  color: #666;
+  font-weight: 600;
 }
 
 .suggestion-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
+  padding: 12px 15px;
   cursor: pointer;
   transition: background 0.2s;
+  border-bottom: 1px solid #f0f0f0;
 }
 
 .suggestion-item:hover {
-  background: #f0f8ff;
+  background: #e3f2fd;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
 }
 
 .suggestion-info {
@@ -975,20 +991,24 @@ watch(totalAmount, () => {
 }
 
 .suggestion-name {
-  font-weight: bold;
-  color: #2c3e50;
-  margin-bottom: 2px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+  font-size: 0.95rem;
 }
 
 .suggestion-details {
   display: flex;
-  gap: 10px;
-  font-size: 0.8rem;
+  gap: 15px;
+  font-size: 0.85rem;
+}
+
+.suggestion-barcode {
   color: #666;
 }
 
 .suggestion-price {
-  color: #e67e22;
+  color: #d35400;
   font-weight: bold;
 }
 
@@ -1008,7 +1028,9 @@ watch(totalAmount, () => {
 
 .products-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 1.2rem;
 }
 
 .products-actions {
@@ -1020,16 +1042,16 @@ watch(totalAmount, () => {
 .products-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 10px;
+  gap: 12px;
   flex: 1;
   overflow-y: auto;
   padding: 5px 0;
 }
 
 .product-card {
-  border: 1px solid #e6e6e6;
+  border: 2px solid #e9ecef;
   border-radius: 8px;
-  padding: 12px;
+  padding: 15px;
   cursor: pointer;
   transition: all 0.3s ease;
   background: white;
@@ -1037,43 +1059,45 @@ watch(totalAmount, () => {
 
 .product-card:hover {
   border-color: #409eff;
-  box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
   transform: translateY(-2px);
 }
 
 .product-card.low-stock {
-  border-color: #f39c12;
-  background: #fff8e1;
+  border-color: #e67e22;
+  background: #fef9e7;
 }
 
 .product-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 8px;
-}
-
-.product-name {
-  font-weight: bold;
-  color: #2c3e50;
-  font-size: 0.9rem;
-  flex: 1;
-  margin-right: 8px;
-}
-
-.product-details {
   margin-bottom: 10px;
 }
 
+.product-name {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 0.95rem;
+  flex: 1;
+  margin-right: 10px;
+  line-height: 1.3;
+}
+
+.product-details {
+  margin-bottom: 12px;
+}
+
 .product-barcode {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   color: #666;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  font-family: 'Courier New', monospace;
 }
 
 .product-price {
-  font-size: 1rem;
-  color: #e67e22;
+  font-size: 1.1rem;
+  color: #d35400;
   font-weight: bold;
 }
 
@@ -1103,25 +1127,32 @@ watch(totalAmount, () => {
 
 .cart-header h3 {
   margin: 0;
-  color: #2c3e50;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 1.2rem;
 }
 
 .cart-summary {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .cart-count {
   font-size: 0.9rem;
-  color: #666;
+  color: #2c3e50;
+  font-weight: 500;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
 }
 
 .cart-items {
   flex: 1;
   overflow: hidden;
-  border: 1px solid #e6e6e6;
+  border: 2px solid #e9ecef;
   border-radius: 8px;
+  background: white;
 }
 
 .empty-cart {
@@ -1130,32 +1161,40 @@ watch(totalAmount, () => {
   align-items: center;
   justify-content: center;
   height: 200px;
-  color: #999;
+  color: #666;
 }
 
 .empty-icon {
   font-size: 3rem;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
+  opacity: 0.6;
+}
+
+.empty-cart p {
+  font-size: 1rem;
+  color: #666;
+  margin: 5px 0;
 }
 
 .empty-tip {
   font-size: 0.9rem;
-  margin-top: 5px;
+  color: #999;
 }
 
 .cart-list {
   height: 100%;
   overflow-y: auto;
-  padding: 10px;
+  padding: 12px;
 }
 
 .cart-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px;
+  padding: 15px;
   border-bottom: 1px solid #f0f0f0;
   transition: background 0.2s;
+  background: white;
 }
 
 .cart-item:hover {
@@ -1172,37 +1211,49 @@ watch(totalAmount, () => {
 }
 
 .item-name {
-  font-weight: bold;
-  color: #2c3e50;
-  margin-bottom: 4px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: 0.95rem;
 }
 
 .item-meta {
   display: flex;
-  gap: 10px;
-  font-size: 0.8rem;
+  gap: 15px;
+  font-size: 0.85rem;
+}
+
+.item-barcode {
   color: #666;
+  font-family: 'Courier New', monospace;
+}
+
+.item-unit-price {
+  color: #d35400;
+  font-weight: 500;
 }
 
 .item-controls {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .quantity-controls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .quantity-display {
   min-width: 30px;
   text-align: center;
   font-weight: bold;
+  color: #1a1a1a;
+  font-size: 1rem;
 }
 
 .item-total {
@@ -1210,25 +1261,37 @@ watch(totalAmount, () => {
   text-align: right;
   font-weight: bold;
   color: #27ae60;
+  font-size: 1rem;
+}
+
+.checkout-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 10px;
+  border: 2px solid #e9ecef;
 }
 
 .checkout-section h3 {
   margin: 0 0 20px 0;
-  color: #2c3e50;
+  color: #1a1a1a;
+  font-weight: 600;
+  font-size: 1.2rem;
 }
 
 .amount-display {
-  background: #f8f9fa;
-  padding: 15px;
+  background: white;
+  padding: 20px;
   border-radius: 8px;
   margin-bottom: 20px;
+  border: 2px solid #e9ecef;
 }
 
 .amount-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
+  font-size: 1rem;
 }
 
 .amount-row:last-child {
@@ -1236,24 +1299,29 @@ watch(totalAmount, () => {
 }
 
 .final-row {
-  padding-top: 10px;
-  border-top: 2px solid #e67e22;
-  font-size: 1.1rem;
+  padding-top: 15px;
+  border-top: 3px solid #27ae60;
+  font-size: 1.2rem;
 }
 
 .amount-label {
-  font-weight: 500;
-  color: #2c3e50;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
 .amount-value {
   font-weight: bold;
-  color: #e67e22;
+  color: #d35400;
+}
+
+.discount-value {
+  color: #27ae60;
 }
 
 .final-amount {
-  font-size: 1.3rem;
+  font-size: 1.4rem;
   color: #27ae60;
+  font-weight: bold;
 }
 
 .member-section, .payment-section {
@@ -1261,30 +1329,31 @@ watch(totalAmount, () => {
 }
 
 .member-section h4, .payment-section h4 {
-  margin: 0 0 10px 0;
-  color: #2c3e50;
-  font-size: 1rem;
+  margin: 0 0 12px 0;
+  color: #1a1a1a;
+  font-size: 1.1rem;
+  font-weight: 600;
 }
 
 .member-card {
   background: linear-gradient(135deg, #e8f5e8 0%, #f0f8f0 100%);
-  padding: 15px;
+  padding: 18px;
   border-radius: 10px;
-  margin-top: 10px;
-  border: 1px solid #d4edda;
-  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1);
+  margin-top: 12px;
+  border: 2px solid #27ae60;
+  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.15);
 }
 
 .member-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .member-name {
   font-weight: bold;
-  color: #2c3e50;
+  color: #1a1a1a;
   font-size: 1.1rem;
 }
 
@@ -1294,64 +1363,66 @@ watch(totalAmount, () => {
 }
 
 .member-details {
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .member-level {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 10px;
 }
 
 .member-phone {
   color: #666;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 
 .member-benefits {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
 }
 
 .member-points {
-  color: #e67e22;
-  font-weight: 500;
+  color: #d35400;
+  font-weight: 600;
 }
 
 .discount-info {
   color: #27ae60;
   font-weight: bold;
-  background: rgba(39, 174, 96, 0.1);
-  padding: 2px 8px;
-  border-radius: 4px;
+  background: rgba(39, 174, 96, 0.15);
+  padding: 4px 10px;
+  border-radius: 6px;
 }
 
 .member-discount {
-  margin-top: 12px;
-  padding: 10px;
+  margin-top: 15px;
+  padding: 12px;
   background: rgba(39, 174, 96, 0.1);
-  border-radius: 6px;
-  border-left: 3px solid #27ae60;
+  border-radius: 8px;
+  border-left: 4px solid #27ae60;
 }
 
 .discount-header {
   font-weight: bold;
   color: #27ae60;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
+  margin-bottom: 10px;
+  font-size: 0.95rem;
 }
 
 .discount-details {
-  font-size: 0.85rem;
+  font-size: 0.9rem;
 }
 
 .discount-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  color: #1a1a1a;
 }
 
 .discount-row.highlight {
@@ -1360,52 +1431,43 @@ watch(totalAmount, () => {
 }
 
 .saved-amount {
-  color: #e67e22;
+  color: #d35400;
   font-weight: bold;
 }
 
 .no-member-tip {
-  margin-top: 10px;
-  padding: 8px 12px;
-  background: #f8f9fa;
-  border-radius: 6px;
-  color: #666;
-  font-size: 0.85rem;
+  margin-top: 12px;
+  padding: 12px 15px;
+  background: #e3f2fd;
+  border-radius: 8px;
+  color: #1976d2;
+  font-size: 0.9rem;
   text-align: center;
-  border: 1px dashed #dee2e6;
-}
-
-.member-discount-row {
-  color: #27ae60;
+  border: 2px dashed #1976d2;
   font-weight: 500;
-}
-
-.discount-value {
-  color: #27ae60;
-  font-weight: bold;
 }
 
 .payment-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
 }
 
 .action-buttons {
   display: grid;
   grid-template-columns: 1fr 2fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .pay-button {
-  font-size: 1.1rem;
-  height: 50px;
+  font-size: 1.2rem;
+  height: 55px;
   font-weight: bold;
 }
 
 .payment-success {
   text-align: center;
-  padding: 20px;
+  padding: 25px;
 }
 
 .success-icon {
@@ -1416,7 +1478,8 @@ watch(totalAmount, () => {
 .payment-success h3 {
   color: #27ae60;
   margin-bottom: 25px;
-  font-size: 1.5rem;
+  font-size: 1.6rem;
+  font-weight: bold;
 }
 
 .payment-details {
@@ -1424,19 +1487,25 @@ watch(totalAmount, () => {
   padding: 20px;
   border-radius: 8px;
   text-align: left;
+  border: 2px solid #e9ecef;
 }
 
 .payment-details p {
   display: flex;
   justify-content: space-between;
-  margin: 0 0 10px 0;
-  padding: 5px 0;
+  margin: 0 0 12px 0;
+  padding: 8px 0;
+  font-size: 1rem;
+  color: #1a1a1a;
 }
 
-.change-highlight {
-  color: #27ae60;
+.payment-details span:first-child {
+  font-weight: 600;
+}
+
+.payment-details span:last-child {
   font-weight: bold;
-  font-size: 1.1rem;
+  color: #27ae60;
 }
 
 @media (max-width: 1200px) {

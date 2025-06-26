@@ -5,40 +5,17 @@
       <template #header>
         <div class="card-header">
           <span>👥 用户管理</span>
-          <el-button type="primary" @click="showAddDialog">
-            新增用户
-          </el-button>
+          
         </div>
       </template>
 
-      <!-- 搜索区域 -->
-      <div class="search-area">
-        <el-form inline>
-          <el-form-item label="用户名">
-            <el-input 
-              v-model="searchForm.username" 
-              placeholder="请输入用户名"
-              clearable
-            />
-          </el-form-item>
-          <el-form-item label="角色">
-            <el-select v-model="searchForm.role" placeholder="请选择角色" clearable>
-              <el-option label="系统管理员" value="admin" />
-              <el-option label="商品管理员" value="manager" />
-              <el-option label="收银员" value="cashier" />
-            </el-select>
-          </el-form-item>
-          <el-form-item>
-            <el-button type="primary" @click="handleSearch">搜索</el-button>
-            <el-button @click="handleReset">重置</el-button>
-          </el-form-item>
-        </el-form>
-      </div>
+      
 
       <!-- 表格 -->
       <el-table :data="tableData" v-loading="loading">
         <el-table-column prop="username" label="用户名" />
         <el-table-column prop="name" label="姓名" />
+        
         <el-table-column prop="role" label="角色" width="120">
           <template #default="{ row }">
             <el-tag :type="getRoleType(row.role)">
@@ -58,18 +35,12 @@
             </el-tag>
           </template>
         </el-table-column>
+        
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="handleEdit(row)">编辑</el-button>
+            
             <el-button size="small" type="warning" @click="handleResetPassword(row)">重置密码</el-button>
-            <el-button 
-              size="small" 
-              type="danger" 
-              @click="handleDelete(row)"
-              :disabled="row.username === 'admin'"
-            >
-              删除
-            </el-button>
+            
           </template>
         </el-table-column>
       </el-table>

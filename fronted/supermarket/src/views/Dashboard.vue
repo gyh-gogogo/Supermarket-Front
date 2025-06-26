@@ -133,6 +133,12 @@
         </div>
       </div>
     </div>
+
+    <!-- AI助手组件 - 仅管理员可见 -->
+    <AIAssistant 
+      v-if="currentUser?.role === 'admin'" 
+      :dashboard-data="dashboardData"
+    />
   </div>
 </template>
 
@@ -141,6 +147,7 @@ import { ref, reactive, onMounted, onUnmounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { dashboardApi, type DashboardStats, type SystemOverview } from '../api/dashboard'
+import AIAssistant from '../components/AIAssistant.vue'
 
 const router = useRouter()
 
@@ -358,6 +365,16 @@ onUnmounted(() => {
     clearInterval(dataInterval)
   }
 })
+
+// 为AI助手准备的数据
+const dashboardData = computed(() => ({
+  todaySales: todayStats.todaySales,
+  todayOrders: todayStats.todayOrders,
+  totalProducts: systemOverview.totalProducts,
+  totalMembers: systemOverview.totalMembers,
+  lowStockCount: systemOverview.lowStockCount,
+  activeMembers: systemOverview.activeMembers
+}))
 
 // 暴露刷新方法给模板使用
 defineExpose({

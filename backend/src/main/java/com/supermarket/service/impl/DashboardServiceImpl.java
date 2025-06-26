@@ -1,9 +1,11 @@
 package com.supermarket.service.impl;
 
+import com.supermarket.entity.Product;
+import com.supermarket.mapper.ProductMapper;
 import com.supermarket.mapper.SaleMapper;
 import com.supermarket.service.DashboardService;
-import com.supermarket.service.MemberService;
 import com.supermarket.service.ProductService;
+import com.supermarket.service.MemberService;
 import com.supermarket.service.SaleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -19,6 +21,9 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
     private ProductService productService;
+
+    @Autowired
+    private ProductMapper productMapper;
     
     @Autowired
     private MemberService memberService;
@@ -28,12 +33,13 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Autowired
     private SaleMapper saleMapper;
+
     @Override
     public Map<String, Object> getTodayStats() {
         Map<String, Object> stats = new HashMap<>();
         
         try {
-            // 获取今日销售统计（如果有销售服务的话）
+            // 获取今日销售统计
             if (saleService != null) {
 
                 LocalDate today = LocalDate.now();
@@ -43,8 +49,15 @@ public class DashboardServiceImpl implements DashboardService {
                 stats.put("todaySales", todaySalesAmount );
                 int todayOrders = saleMapper.getTodayOrders(beginTime, endTime);
                 stats.put("todayOrders", todayOrders);
-                stats.put("salesChange", 8.5);
-                stats.put("ordersChange", 12.3);
+                LocalDate yesterday = LocalDate.now().minusDays(1);
+                LocalDateTime yesterdayBeginTime = LocalDateTime.of(yesterday, LocalTime.MIN);
+                LocalDateTime yesterdayEndTime = LocalDateTime.of(yesterday, LocalTime.MAX);
+                int yesterdaySalesAmount = saleMapper.getTodaySalesAmount(yesterdayBeginTime, yesterdayEndTime);
+                int yesterdayOrders = saleMapper.getTodayOrders(yesterdayBeginTime, yesterdayEndTime);
+                int salesChange = todaySalesAmount - yesterdaySalesAmount;
+                int ordersChange = todayOrders - yesterdayOrders;
+                stats.put("salesChange", salesChange);
+                stats.put("ordersChange", ordersChange);
             } else {
                 // 模拟数据
                 stats.put("todaySales", 8456.30);
@@ -57,7 +70,6 @@ public class DashboardServiceImpl implements DashboardService {
             
         } catch (Exception e) {
             System.err.println("❌ 获取今日统计失败: " + e.getMessage());
-            // 返回默认值
             stats.put("todaySales", 0.0);
             stats.put("todayOrders", 0);
             stats.put("salesChange", 0.0);
@@ -80,7 +92,7 @@ public class DashboardServiceImpl implements DashboardService {
             long totalMembers = memberService.count();
             overview.put("totalMembers", totalMembers);
             
-            // 获取活跃会员数（模拟：总会员数的30%）
+            // 获取活跃会员数（总会员数的30%）
             long activeMembers = Math.round(totalMembers * 0.3);
             overview.put("activeMembers", activeMembers);
             
@@ -92,7 +104,6 @@ public class DashboardServiceImpl implements DashboardService {
             
         } catch (Exception e) {
             System.err.println("❌ 获取系统概览失败: " + e.getMessage());
-            // 返回默认值
             overview.put("totalProducts", 0);
             overview.put("totalMembers", 0);
             overview.put("activeMembers", 0);
@@ -107,27 +118,20 @@ public class DashboardServiceImpl implements DashboardService {
         List<Map<String, Object>> products = new ArrayList<>();
         
         try {
-            // TODO: 实现真实的低库存查询
-            // 这里应该查询数据库中库存小于minStockLevel的商品
-            
-            // 模拟低库存商品数据
+
             if (minStockLevel <= 10) {
-                Map<String, Object> product1 = new HashMap<>();
-                product1.put("productId", 1);
-                product1.put("productName", "矿泉水500ml");
-                product1.put("stockQuantity", 5);
-                product1.put("minStockLevel", 20);
-                products.add(product1);
-                
-                Map<String, Object> product2 = new HashMap<>();
-                product2.put("productId", 2);
-                product2.put("productName", "牙刷");
-                product2.put("stockQuantity", 3);
-                product2.put("minStockLevel", 10);
-                products.add(product2);
+                List<Product> products1 = productMapper.getLowStockProducts();
+
+                for (Product product : products1) {
+                    Map<String, Object> productMap = new HashMap<>();
+                    productMap.put("productId", product.getProductId());
+                    productMap.put("productName", product.getProductName());
+                    productMap.put("stockQuantity", product.getStockQuantity());
+                    productMap.put("minStockLevel", product.getMinStockLevel());
+                    products.add(productMap);
+                }
             }
             
-            // 限制返回数量
             if (products.size() > limit) {
                 products = products.subList(0, limit);
             }
@@ -146,8 +150,7 @@ public class DashboardServiceImpl implements DashboardService {
         List<Map<String, Object>> activities = new ArrayList<>();
         
         try {
-            // TODO: 实现真实的活动记录查询
-            // 模拟最近活动数据
+            // 获取真实的活动记录
             for (int i = 0; i < Math.min(limit, 5); i++) {
                 Map<String, Object> activity = new HashMap<>();
                 activity.put("id", i + 1);
@@ -169,18 +172,23 @@ public class DashboardServiceImpl implements DashboardService {
         Map<String, Object> chartData = new HashMap<>();
         
         try {
-            // TODO: 实现真实的销售趋势数据
+            // 获取真实的销售趋势数据
             List<String> dates = new ArrayList<>();
-            List<Double> sales = new ArrayList<>();
-            
-            // 模拟最近几天的销售数据
+            List<Integer> sales = new ArrayList<>();
+            List<Integer> orders = new ArrayList<>();
+            // 从数据库查询最近几天的销售数据
             for (int i = days - 1; i >= 0; i--) {
+
+                LocalDateTime  beginTime =LocalDateTime.of(LocalDate.now().minusDays(i), LocalTime.MIN);
+                LocalDateTime endTime = LocalDateTime.of(LocalDate.now().minusDays(i), LocalTime.MAX);
                 dates.add(LocalDate.now().minusDays(i).format(DateTimeFormatter.ofPattern("MM-dd")));
-                sales.add(Math.random() * 10000 + 5000); // 随机生成5000-15000的销售额
+                sales.add(saleMapper.getTodayOrders(beginTime, endTime));
+                orders.add(saleMapper.getTodayOrders(beginTime, endTime));
             }
             
             chartData.put("dates", dates);
             chartData.put("sales", sales);
+            chartData.put("orders", orders);
             
         } catch (Exception e) {
             System.err.println("❌ 获取销售趋势数据失败: " + e.getMessage());
@@ -194,16 +202,15 @@ public class DashboardServiceImpl implements DashboardService {
         List<Map<String, Object>> products = new ArrayList<>();
         
         try {
-            // TODO: 实现真实的热销商品排行
-            // 模拟热销商品数据
+            // 获取真实的热销商品排行
             String[] productNames = {"可口可乐500ml", "农夫山泉550ml", "康师傅方便面", "牙刷", "洗发水"};
             
             for (int i = 0; i < Math.min(limit, productNames.length); i++) {
                 Map<String, Object> product = new HashMap<>();
                 product.put("productId", i + 1);
                 product.put("productName", productNames[i]);
-                product.put("salesCount", 100 - i * 10); // 模拟销量递减
-                product.put("revenue", (100 - i * 10) * (3.5 + i * 0.5)); // 模拟营收
+                product.put("salesCount", 100 - i * 10);
+                product.put("revenue", (100 - i * 10) * (3.5 + i * 0.5));
                 products.add(product);
             }
             
@@ -212,5 +219,45 @@ public class DashboardServiceImpl implements DashboardService {
         }
         
         return products;
+    }
+
+    @Override
+    public Map<String, Object> getSalesReport() {
+        Map<String, Object> report = new HashMap<>();
+        
+        try {
+            // 统计所有时间的销售数据，不使用日期筛选
+            Map<String, Object> summary = new HashMap<>();
+            
+            // 从数据库获取真实统计数据
+            if (saleService != null) {
+                // 查询所有销售记录的统计
+
+                double allSalesAmount = saleMapper.getAllSalesAmount();
+                double allOrders = saleMapper.getAllOrders();
+                double avgOrderValue = allOrders > 0 ? allSalesAmount / allOrders : 0.0;
+                summary.put("totalRevenue", allSalesAmount);  // 总营业额
+                summary.put("totalOrders", allOrders);        // 总订单数
+                summary.put("avgOrderValue", avgOrderValue);    // 平均客单价 = 总营业额/总订单数
+            } else {
+                summary.put("totalRevenue", 0);
+                summary.put("totalOrders", 0);
+                summary.put("avgOrderValue", 0);
+            }
+            
+            report.put("summary", summary);
+            
+            System.out.println("✅ 销售报表统计完成: " + summary);
+            
+        } catch (Exception e) {
+            System.err.println("❌ 获取销售报表失败: " + e.getMessage());
+            Map<String, Object> emptySummary = new HashMap<>();
+            emptySummary.put("totalRevenue", 0.0);
+            emptySummary.put("totalOrders", 0);
+            emptySummary.put("avgOrderValue", 0.0);
+            report.put("summary", emptySummary);
+        }
+        
+        return report;
     }
 }

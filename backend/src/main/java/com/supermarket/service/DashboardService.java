@@ -3,6 +3,8 @@ package com.supermarket.service;
 import java.util.List;
 import java.util.Map;
 
+import static net.sf.jsqlparser.parser.feature.Feature.limit;
+
 /**
  * Dashboard仪表盘服务接口
  */
@@ -32,6 +34,9 @@ public interface DashboardService {
      * 获取销售趋势图表数据
      */
     Map<String, Object> getSalesChart(Integer days);
+
+
+    Map<String, Object> getSalesReport();
     
     /**
      * 获取热销商品排行

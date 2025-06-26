@@ -15,6 +15,7 @@ public class CorsConfig {
         CorsConfiguration config = new CorsConfiguration();
         
         // 允许前端域名
+        config.addAllowedOriginPattern("*"); // 允许所有域名访问
         config.addAllowedOrigin("http://localhost:5173"); // Vite默认端口
         config.addAllowedOrigin("http://localhost:3000");
         config.addAllowedOrigin("http://localhost:3001");// 可能的其他端口
